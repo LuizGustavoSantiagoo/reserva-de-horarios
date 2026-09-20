@@ -10,7 +10,7 @@ respondendo mensagem. Para donos de arena de areia e para quem quer jogar.
 
 ## Protótipo
 
-- **Telas navegáveis:** <https://learn-depth-46111132.figma.site/>
+- Telas navegáveis: <https://learn-depth-46111132.figma.site/>
 
 ## Stack
 
