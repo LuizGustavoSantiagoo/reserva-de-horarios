@@ -1,8 +1,8 @@
 # 🗺️ Jornadas de Usuário
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.0.0
-**Última atualização:** 2026-09-20
+**Versão:** 1.1.0
+**Última atualização:** 2026-09-24
 
 > 🤖 **Este documento é a fonte da verdade sobre O QUE A PESSOA VIVE na tela** —
 > o caminho do primeiro clique até o objetivo, e principalmente os pontos onde ela
@@ -25,7 +25,7 @@
 Esta é a única jornada do projeto que marca os quatro critérios, e por um motivo só:
 ela é a história inteira do produto. É aqui que o horário sai de "livre para qualquer
 um" e vira "de alguém", e cada passo dessa passagem depende de algo que não está sob
-o controle da tela — o relógio, o app do banco, o aviso do gateway.
+o controle da tela — o relógio, o app do banco, o aviso do pagamento.
 
 ```mermaid
 flowchart TD
@@ -40,14 +40,14 @@ flowchart TD
     G --> H{"O que aconteceu?"}
     H -->|"não pagou e sumiu"| X2[["Some com o Pix na mão —<br/>e o horário fica preso?"]]
     H -->|"pagou e fechou a aba"| X3[["Some pagando —<br/>e o código de cancelamento?"]]
-    H -->|"pagou e voltou ao site"| I{"O aviso do gateway já chegou?"}
+    H -->|"pagou e voltou ao site"| I{"O aviso do pagamento já chegou?"}
     I -->|"ainda não"| J["«pessoa» vê 'estamos confirmando<br/>seu pagamento' e a tela espera sozinha"]
     J --> I
     I -->|"chegou: aprovado"| K(["Reserva confirmada:<br/>a tela mostra o código de cancelamento"])
-    X2 --> L["Gateway avisa que a cobrança venceu · RN03"]
+    X2 --> L["A validade da cobrança termina<br/>e o sistema expira a reserva · RN03"]
     L --> M(["Reserva expirada:<br/>horário volta livre na grade · US04"])
-    M -.->|"pagou depois do vencimento"| N["Fica registrado como pago fora do prazo<br/>e sinalizado no painel do admin · RN18"]
-    X3 --> O["O gateway avisa mesmo assim:<br/>a reserva é confirmada e aparece na grade"]
+    M -.->|"pagou depois do vencimento"| N["Horário sai da grade de novo e a decisão<br/>vai para o painel do admin · RN18 · US12"]
+    X3 --> O["O aviso do pagamento chega mesmo assim:<br/>a reserva é confirmada e aparece na grade"]
     O --> P(["Reserva válida, mas sem código:<br/>cancelar só falando com o administrador · US11"])
     X1 --> Q(["Pré-reserva cancelada:<br/>horário livre para qualquer um, inclusive para ela"])
 
@@ -69,19 +69,29 @@ plataforma existe para resolver é exatamente o horário prometido a duas pessoa
 
 **O que decidimos sobre o nó vermelho X2 — some com o Pix na mão, sem pagar:**
 
-Também não fica preso, mas por outro dono: aqui quem conta o prazo é o gateway, não o
-sistema. A reserva pendente segura o horário enquanto a cobrança Pix estiver válida, e
-cai quando o gateway avisa que ela venceu — o sistema não fica olhando o relógio por
-conta própria. Os dois prazos são sequenciais e não se somam: os 3 minutos acabam no
-instante em que o Pix é gerado, e dali em diante o relógio é o do gateway. Se o
-pagamento chegar depois de a reserva já ter expirado, ele **não** reconfirma nada
-sozinho: fica registrado como pago fora do prazo e sinalizado no painel, porque nesse
-intervalo o horário pode já ter sido vendido para outra pessoa — e essa conversa é
-humana, não automática.
+Também não fica preso, mas por outro relógio: o da cobrança. A reserva pendente segura
+o horário enquanto o Pix estiver válido — **15 minutos** (RN03) — e cai quando esse
+prazo acaba. Aqui entra uma descoberta que mudou a regra: o provedor avisa quando o Pix
+é **pago**, mas **não avisa quando ele vence**. Não há aviso de vencimento para esperar,
+então quem precisa perceber que o prazo acabou é o **próprio sistema** — e precisa
+perceber mesmo que ninguém esteja com a tela aberta, senão o horário fica preso até a
+próxima visita de alguém. Os dois prazos continuam sequenciais e não se somam: os 3
+minutos acabam no instante em que o Pix é gerado, e dali em diante manda a validade da
+cobrança.
+
+E se o dinheiro entrar **depois** de a reserva já ter caído? Ele não reconfirma nada
+sozinho — mas também não pode ser ignorado, porque o horário voltou para a grade e
+continua à venda. Então, no instante em que o pagamento atrasado aparece, o sistema
+**tira o horário da grade outra vez** e joga a decisão para o painel: a reserva fica
+como *pagamento em revisão* e o administrador confirma ou descarta (RN18, US12). A
+única exceção é o horário já ter sido reservado por outra pessoa nesse intervalo —
+aí não há o que reter, quem chegou antes fica com ele, e a conversa é humana. O que
+não pode acontecer, em nenhuma das duas pontas, é o sistema receber dinheiro e seguir
+oferecendo o mesmo horário para o próximo.
 
 **O que decidimos sobre o nó vermelho X3 — paga e fecha a aba antes de ver o código:**
 
-A reserva vale. O pagamento foi feito, o gateway avisa, a reserva é confirmada e o
+A reserva vale. O pagamento foi feito, o aviso chega, a reserva é confirmada e o
 horário aparece ocupado na grade com o primeiro nome da pessoa — fechar a aba não
 desfaz um Pix pago. O que se perde é o código de cancelamento, que só é mostrado na
 tela de confirmação e não é enviado por nenhum outro canal, porque WhatsApp, e-mail e
@@ -104,7 +114,7 @@ chegar não vê a grade nem uma tela morta — vê *"estamos confirmando seu pag
 essa tela espera por conta própria até virar a confirmação com o código. Não é
 enfeite: como não existe notificação, esse é o único momento em que o código de
 cancelamento pode ser entregue a quem fez tudo certo. A reserva continua pendente até
-o aviso chegar — voltar do banco não confirma nada, só o gateway confirma.
+o aviso chegar — voltar do banco não confirma nada, só o aviso do provedor confirma.
 
 ---
 
