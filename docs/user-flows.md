@@ -46,7 +46,7 @@ flowchart TD
     I -->|"chegou: aprovado"| K(["Reserva confirmada:<br/>a tela mostra o código de cancelamento"])
     X2 --> L["A validade da cobrança termina<br/>e o sistema expira a reserva · RN03"]
     L --> M(["Reserva expirada:<br/>horário volta livre na grade · US04"])
-    M -.->|"pagou depois do vencimento"| N["Horário sai da grade de novo e a decisão<br/>vai para o painel do admin · RN18 · US12"]
+    M -.->|"pagou depois do vencimento"| N["Horário ainda livre: reserva confirmada.<br/>Já é de outra pessoa: pagamento registrado<br/>para o admin · RN18"]
     X3 --> O["O aviso do pagamento chega mesmo assim:<br/>a reserva é confirmada e aparece na grade"]
     O --> P(["Reserva válida, mas sem código:<br/>cancelar só falando com o administrador · US11"])
     X1 --> Q(["Pré-reserva cancelada:<br/>horário livre para qualquer um, inclusive para ela"])
@@ -79,15 +79,12 @@ próxima visita de alguém. Os dois prazos continuam sequenciais e não se somam
 minutos acabam no instante em que o Pix é gerado, e dali em diante manda a validade da
 cobrança.
 
-E se o dinheiro entrar **depois** de a reserva já ter caído? Ele não reconfirma nada
-sozinho — mas também não pode ser ignorado, porque o horário voltou para a grade e
-continua à venda. Então, no instante em que o pagamento atrasado aparece, o sistema
-**tira o horário da grade outra vez** e joga a decisão para o painel: a reserva fica
-como *pagamento em revisão* e o administrador confirma ou descarta (RN18, US12). A
-única exceção é o horário já ter sido reservado por outra pessoa nesse intervalo —
-aí não há o que reter, quem chegou antes fica com ele, e a conversa é humana. O que
-não pode acontecer, em nenhuma das duas pontas, é o sistema receber dinheiro e seguir
-oferecendo o mesmo horário para o próximo.
+E se o dinheiro entrar **depois** de a reserva já ter caído? Se o horário ainda
+estiver livre, a reserva é **confirmada na hora**, como se o aviso tivesse chegado no
+prazo (RN18). Se o horário já tiver sido reservado por outra pessoa nesse intervalo,
+quem chegou antes fica com ele: o pagamento fica registrado no painel do
+administrador, e a conversa é humana. O que não pode acontecer, em nenhuma das duas
+pontas, é o sistema receber dinheiro e seguir oferecendo o mesmo horário para o próximo.
 
 **O que decidimos sobre o nó vermelho X3 — paga e fecha a aba antes de ver o código:**
 
