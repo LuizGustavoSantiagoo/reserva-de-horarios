@@ -17,7 +17,7 @@
 
 ---
 
-## Jornada 1 — Reservar um horário e pagar o Pix
+## Jornada 1 — Reservar horários e pagar o Pix
 
 **Story:** US02 e US03 (o vencimento da cobrança é a US04)
 **Critérios que ela marca:** sai do site e volta · depende do tempo · depende de outra pessoa · pode ser abandonada
@@ -29,13 +29,13 @@ o controle da tela — o relógio, o app do banco, o aviso do pagamento.
 
 ```mermaid
 flowchart TD
-    A(["Cliente vê a grade da quadra<br/>e escolhe um horário livre"]) --> B{"O horário ainda está livre?"}
-    B -->|"não — outra pessoa chegou antes"| B1["Volta para a grade avisado:<br/>alguém está reservando agora,<br/>pode voltar em instantes"]
-    B -->|"sim"| C["Sistema pré-reserva o horário<br/>por 3 minutos · RN16"]
+    A(["Cliente vê a grade e escolhe um ou mais<br/>horários livres, de qualquer quadra e dia"]) --> B{"Os horários ainda estão livres?"}
+    B -->|"nenhum — outra pessoa chegou antes"| B1["Volta para a grade avisado:<br/>alguém está reservando agora,<br/>pode voltar em instantes"]
+    B -->|"todos ou parte"| C["Sistema pré-reserva os livres por 3 minutos;<br/>os ocupados saem da compra · RN16 · RN22"]
     C --> D["«pessoa» informa nome e telefone"]
     D --> E{"Concluiu dentro dos 3 minutos?"}
     E -->|"não"| X1[["Some no formulário —<br/>e o horário fica preso?"]]
-    E -->|"sim"| F["Sistema cria a reserva pendente<br/>e apresenta o Pix · RN17"]
+    E -->|"sim"| F["Sistema cria a compra pendente<br/>e apresenta um único Pix · RN17 · RN22"]
     F --> G(["«pessoa» abre o app do banco<br/>fora do site"])
     G --> H{"O que aconteceu?"}
     H -->|"não pagou e sumiu"| X2[["Some com o Pix na mão —<br/>e o horário fica preso?"]]
@@ -43,10 +43,10 @@ flowchart TD
     H -->|"pagou e voltou ao site"| I{"O aviso do pagamento já chegou?"}
     I -->|"ainda não"| J["«pessoa» vê 'estamos confirmando<br/>seu pagamento' e a tela espera sozinha"]
     J --> I
-    I -->|"chegou: aprovado"| K(["Reserva confirmada:<br/>a tela mostra o código de cancelamento"])
-    X2 --> L["A validade da cobrança termina<br/>e o sistema expira a reserva · RN03"]
-    L --> M(["Reserva expirada:<br/>horário volta livre na grade · US04"])
-    M -.->|"pagou depois do vencimento"| N["Horário ainda livre: reserva confirmada.<br/>Já é de outra pessoa: pagamento registrado<br/>para o admin · RN18"]
+    I -->|"chegou: aprovado"| K(["Compra confirmada:<br/>a tela mostra o código de cancelamento"])
+    X2 --> L["A validade da cobrança termina<br/>e o sistema expira a compra · RN03"]
+    L --> M(["Compra expirada: horários voltam livres na grade;<br/>se a tela ainda está aberta, avisa tempo esgotado · US04"])
+    M -.->|"pagou depois do vencimento"| N["Horários ainda livres: confirmados.<br/>Os que já são de outra pessoa ficam de fora,<br/>e o pagamento fica registrado para o admin · RN18"]
     X3 --> O["O aviso do pagamento chega mesmo assim:<br/>a reserva é confirmada e aparece na grade"]
     O --> P(["Reserva válida, mas sem código:<br/>cancelar só falando com o administrador · US11"])
     X1 --> Q(["Pré-reserva cancelada:<br/>horário livre para qualquer um, inclusive para ela"])
@@ -79,11 +79,11 @@ próxima visita de alguém. Os dois prazos continuam sequenciais e não se somam
 minutos acabam no instante em que o Pix é gerado, e dali em diante manda a validade da
 cobrança.
 
-E se o dinheiro entrar **depois** de a reserva já ter caído? Se o horário ainda
-estiver livre, a reserva é **confirmada na hora**, como se o aviso tivesse chegado no
-prazo (RN18). Se o horário já tiver sido reservado por outra pessoa nesse intervalo,
-quem chegou antes fica com ele: o pagamento fica registrado no painel do
-administrador, e a conversa é humana. O que não pode acontecer, em nenhuma das duas
+E se o dinheiro entrar **depois** de a compra já ter caído? Os horários que ainda
+estiverem livres são **confirmados na hora**, como se o aviso tivesse chegado no
+prazo (RN18). Os que já tiverem sido reservados por outra pessoa nesse intervalo ficam
+com quem chegou antes: o pagamento fica registrado no painel do administrador, com os
+horários que não puderam ser entregues, e a conversa é humana. O que não pode acontecer, em nenhuma das duas
 pontas, é o sistema receber dinheiro e seguir oferecendo o mesmo horário para o próximo.
 
 **O que decidimos sobre o nó vermelho X3 — paga e fecha a aba antes de ver o código:**
