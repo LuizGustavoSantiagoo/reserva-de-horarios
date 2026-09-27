@@ -51,7 +51,7 @@ de ninguém.
 | **Cliente** | Quem quer jogar e reserva o horário. Não tem conta: identifica-se com nome e telefone. Decide o que vai jogar na hora — o sistema não pergunta. | **Administrador** — o cliente compra; o administrador opera. |
 | **Administrador** | Quem opera o sistema: mantém os dados da arena, cadastra as quadras, define a agenda e vê as reservas. Entra com login e senha. | **Cliente** — ver acima. |
 | **Pagamento** | O Pix que confirma a reserva. Sem ele, a reserva não vale. | **Reserva** — a reserva é o direito; o pagamento é a prova de que o dinheiro entrou. |
-| **Pagamento em revisão** | O que sobra quando o dinheiro entra depois de a reserva já ter expirado: o pagamento existe, a reserva não vale mais, e só o administrador decide o destino. Enquanto está em revisão, o horário **não é oferecido a mais ninguém**. | **Reserva pendente** — a pendente espera o dinheiro; esta já recebeu o dinheiro e espera uma pessoa decidir. |
+| **Pagamento fora do prazo** | Pix pago cujo aviso chega depois de a reserva já ter expirado. Se o horário ainda estiver livre, a reserva é confirmada na hora; se já for de outra pessoa, o pagamento fica só registrado para o administrador. | **Reserva pendente** — a pendente ainda está no prazo; esta perdeu o prazo, mas o dinheiro entrou. |
 | **Código de cancelamento** | O código imprevisível mostrado ao cliente quando o pagamento é confirmado. Sozinho, é o que permite cancelar aquela reserva. | **Senha** — não identifica ninguém e não dá acesso a painel: quem tem o código cancela, e só aquela reserva. |
 | **Bloqueio** | Marcação do administrador que tira um horário da grade (manutenção, evento, jogo pago na hora). | **Reserva** — bloqueio não tem cliente nem pagamento. |
 
@@ -139,8 +139,8 @@ que** o horário não fique preso por quem desistiu.
 - [ ] **Dado** uma reserva pendente, **quando** a validade da cobrança termina sem pagamento, **então** ela é marcada como expirada e o horário volta a aparecer livre na grade — sem depender de ninguém abrir tela alguma.
 - [ ] **Dado** uma reserva já confirmada, **quando** a validade daquela cobrança termina, **então** nada acontece — reserva paga não cai.
 - [ ] **Dado** que a expiração é tentada duas vezes na mesma reserva, **quando** é processada, **então** ela continua expirada uma única vez e o horário não é liberado duas vezes.
-- [ ] **Dado** uma reserva expirada cujo horário **ainda está livre**, **quando** o pagamento dela é detectado, **então** o horário é **retido na hora** e deixa de ser oferecido na grade, a reserva passa a *pagamento em revisão* e a pendência aparece no painel — mas ela **não** é confirmada automaticamente.
-- [ ] **Dado** uma reserva expirada cujo horário **já foi reservado por outra pessoa**, **quando** o pagamento dela é detectado, **então** nada é retido, a reserva de quem chegou antes continua valendo, e o pagamento aparece no painel como pendência para tratamento humano.
+- [ ] **Dado** uma reserva expirada cujo horário **ainda está livre**, **quando** o pagamento dela é detectado, **então** a reserva é **confirmada na hora**, o código de cancelamento é gerado e o horário aparece reservado na grade.
+- [ ] **Dado** uma reserva expirada cujo horário **já foi reservado por outra pessoa**, **quando** o pagamento dela é detectado, **então** nada muda na grade, a reserva de quem chegou antes continua valendo, e o pagamento fica registrado e visível no painel do administrador.
 
 **Regras relacionadas:** RN01, RN03, RN17, RN18, RN20
 
@@ -220,7 +220,7 @@ situação do pagamento **para que** eu receba quem chega sem conferir comprovan
 **Critérios de aceite:**
 
 - [ ] **Dado** que estou autenticado, **quando** abro a agenda de um dia, **então** vejo cada horário com a situação (livre, pendente, confirmado, bloqueado), o nome completo, o telefone e a situação do pagamento.
-- [ ] **Dado** um horário com **pagamento em revisão**, **quando** abro a agenda do dia, **então** ele aparece destacado como pendência minha, e não como horário livre.
+- [ ] **Dado** um pagamento fora do prazo cujo horário **já era de outra pessoa**, **quando** abro a agenda do dia, **então** vejo esse pagamento destacado, com nome, telefone e valor, para tratar com a pessoa.
 - [ ] **Dado** um dia sem nenhuma reserva, **quando** o abro, **então** vejo uma mensagem clara de dia vazio.
 - [ ] **Dado** que não estou autenticado, **quando** tento abrir, **então** sou recusado — **telefone nunca aparece em rota pública**.
 
@@ -258,29 +258,11 @@ imprevisto de quem pediu cancelamento por fora.
 
 ---
 
-### US12 — Resolver um pagamento fora do prazo · `Should Have` · `S` · Status: `🟡 Ready`
-
-**Como** administrador, **eu quero** decidir o que fazer com um pagamento que chegou
-depois de a reserva expirar **para que** o horário não seja vendido duas vezes nem
-fique preso para sempre.
-
-**Critérios de aceite:**
-
-- [ ] **Dado** um pagamento em revisão, **quando** abro o painel, **então** vejo a pendência com quadra, horário, nome, telefone, valor e quando o pagamento chegou.
-- [ ] **Dado** um pagamento em revisão cujo horário está retido, **quando** eu **confirmo** a reserva, **então** ela passa a confirmada, o código de cancelamento é gerado e mostrado para eu repassar à pessoa, e o horário aparece reservado na grade.
-- [ ] **Dado** um pagamento em revisão, **quando** eu o **descarto** informando o motivo, **então** o horário volta a ficar livre na grade, a pendência sai do painel e a decisão fica registrada com autor e motivo.
-- [ ] **Dado** um pagamento em revisão cujo horário **já pertence a outra pessoa**, **quando** abro a pendência, **então** confirmar não é oferecido — resta descartar com motivo, porque o horário não é mais meu para dar.
-- [ ] **Dado** que não estou autenticado, **quando** tento resolver uma pendência, **então** sou recusado.
-
-**Regras relacionadas:** RN01, RN04, RN07, RN11, RN13, RN18
-
----
-
 ## 🛡️ 5. Regras de Negócio (Constraints)
 
 | ID | Regra | Usada em |
 | :-- | :---- | :------- |
-| RN01 | Um horário tem no máximo **uma retenção ativa**. Pré-reserva, reserva pendente, reserva confirmada e **pagamento em revisão** (RN18) ocupam o horário; expirada ou cancelada, não. | US02, US04, US12 |
+| RN01 | Um horário tem no máximo **uma retenção ativa**. Pré-reserva, reserva pendente e reserva confirmada ocupam o horário; expirada ou cancelada, não. | US02, US04 |
 | RN02 | A reserva só é confirmada pelo **aviso de pagamento do provedor**, e só depois de o aviso ser autenticado. Comprovante enviado pelo cliente não confirma nada. | US03 |
 | RN03 | A cobrança Pix nasce válida por **15 minutos**, contados do instante em que é gerada, e a reserva pendente cai quando essa validade termina. O provedor avisa quando o Pix é **pago**, mas **não avisa quando ele vence** — não existe aviso de vencimento para esperar. Quem percebe o fim do prazo e expira a reserva é o **próprio sistema**, por um caminho único; *como* isso é feito é assunto do `architecture.md`. | US03, US04 |
 | RN04 | Cancelamento **não gera reembolso** pelo sistema. | US05, US11 |
@@ -295,7 +277,7 @@ fique preso para sempre.
 | RN13 | Toda operação administrativa exige **autenticação válida**; rota pública nunca expõe telefone nem dado de pagamento. | US06–US11 |
 | RN14 | Quadra com **reserva futura ativa** não pode ser excluída; o sistema barra a exclusão e informa quantas reservas existem. | US07 |
 | RN15 | Alterar a agenda **não desfaz reserva confirmada**; vale só para horários ainda não reservados. | US08 |
-| RN18 | Pagamento confirmado **depois** de a reserva expirar não reconfirma nada sozinho, mas **também não deixa o horário à venda**: se ele ainda estiver livre, é **retido na mesma hora** e a reserva passa a *pagamento em revisão* — deixa de ser oferecido na grade, sem nome de ninguém, até o administrador decidir (US12). Só se o horário **já pertencer a outra pessoa** é que nada é retido: aí a reserva de quem chegou antes prevalece e a pendência aparece no painel para conversa humana. Em qualquer dos dois casos o pagamento fica registrado e visível para o administrador — dinheiro que entrou não some da tela. | US04, US09, US12 |
+| RN18 | Pagamento confirmado **depois** de a reserva expirar: se o horário **ainda estiver livre**, a reserva é **confirmada na hora**, como se o aviso tivesse chegado no prazo. Se o horário **já pertencer a outra pessoa**, quem chegou antes prevalece: nada muda na grade, e o pagamento fica registrado e visível para o administrador, para conversa humana — sem reembolso pelo sistema. Em qualquer dos dois casos, dinheiro que entrou não some da tela. | US04, US09 |
 | RN19 | Tentativas de cancelamento são **limitadas por origem** (proposta: 5 tentativas a cada 10 minutos). Passou do limite, a origem é barrada temporariamente. É o que torna inviável varrer códigos por tentativa e erro. | US05 |
 | RN16 | Abrir a tela de reserva de um horário o **pré-reserva por 3 minutos**: nesse período mais ninguém abre essa tela. Terminado o prazo sem Pix gerado, a pré-reserva é cancelada sem aviso prévio nem renovação, o cliente volta para a grade e o horário fica livre para qualquer um. | US01, US02 |
 | RN17 | Os dois prazos são **sequenciais, não somados**, e têm donos diferentes: os 3 minutos da pré-reserva são contados **pelo sistema**; depois do Pix gerado, quem manda é **a validade de 15 minutos da cobrança** (RN03), na mão do provedor. | US02, US03, US04 |
@@ -316,6 +298,7 @@ fique preso para sempre.
 - **Sinal ou pagamento parcial** — ou paga o valor cheio, ou não tem reserva.
 - **Relatório financeiro e fechamento de caixa** — o painel mostra o dia, não o faturamento do mês.
 - **Outros meios de pagamento** (cartão, dinheiro registrado no sistema) — só Pix.
+- **Revisão manual de pagamento fora do prazo** (a antiga US12) — o pagamento atrasado confirma sozinho se o horário estiver livre (RN18). Uma fila de decisão no painel dobraria os estados da reserva por causa de um caso raro.
 - **Cobrança com dinheiro de verdade** — o provedor roda em ambiente de testes (RN20). Sair para produção é trocar credencial, não mudar regra.
 
 ---
@@ -339,7 +322,7 @@ fique preso para sempre.
 > Decisões fechadas, para consulta: pré-reserva de 3 minutos sem renovação (RN16);
 > validade da cobrança Pix de **15 minutos** (RN03); pagamento em **ambiente de
 > testes**, sem dinheiro real, e sistema que roda sem credencial (RN20); cancelamento até o início do horário (RN12); pagamento
-> atrasado sinalizado no painel (RN18); exclusão barrada por reserva futura (RN14);
+> atrasado confirma se o horário ainda estiver livre (RN18); exclusão barrada por reserva futura (RN14);
 > **tema aprovado pelo professor** em 2026-09-24.
 
 ---
@@ -350,3 +333,4 @@ fique preso para sempre.
 | :--- | :----- | :---------- |
 | 2026-09-20 | 1.0.0 | Versão inicial via `/utf-prd` |
 | 2026-09-24 | 1.1.0 | Pagamento em ambiente de testes, sem dinheiro real (RN20); validade do Pix fixada em 15 min e expiração assumida pelo sistema, já que o provedor não avisa vencimento (RN03); pagamento fora do prazo passa a **reter o horário** em vez de deixá-lo à venda (RN18, US12); dúvidas em aberto fechadas |
+| 2026-09-26 | 1.2.0 | US12 removida: pagamento fora do prazo passa a **confirmar a reserva** se o horário ainda estiver livre, sem estado *pagamento em revisão* nem decisão do administrador (RN18, RN01, US04, US09) |
