@@ -1,8 +1,8 @@
 # 🗺️ Jornadas de Usuário
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.1.0
-**Última atualização:** 2026-09-24
+**Versão:** 1.3.1
+**Última atualização:** 2026-10-12
 
 > 🤖 **Este documento é a fonte da verdade sobre O QUE A PESSOA VIVE na tela** —
 > o caminho do primeiro clique até o objetivo, e principalmente os pontos onde ela
@@ -111,7 +111,10 @@ chegar não vê a grade nem uma tela morta — vê *"estamos confirmando seu pag
 essa tela espera por conta própria até virar a confirmação com o código. Não é
 enfeite: como não existe notificação, esse é o único momento em que o código de
 cancelamento pode ser entregue a quem fez tudo certo. A reserva continua pendente até
-o aviso chegar — voltar do banco não confirma nada, só o aviso do provedor confirma.
+o aviso chegar — voltar do banco não confirma nada, só o provedor confirma. Como o aviso
+pode demorar, a tela mostra desde o início o botão **Conferir pagamento**: ele faz o
+sistema perguntar ao provedor se a cobrança foi paga, e a confirmação acontece na hora
+se foi (US03, RN02).
 
 ---
 
@@ -119,8 +122,8 @@ o aviso chegar — voltar do banco não confirma nada, só o aviso do provedor c
 
 | # | Dúvida | Onde ela precisa ser resolvida |
 | --- | --- | --- |
-| 1 | Que validade dar à cobrança Pix ao criá-la? A escolha define quanto tempo o horário fica preso no nó X2. | `/utf-architecture` — já registrada como Dúvida 1 do `prd.md` |
-| 2 | Quanto tempo a tela de espera fica esperando antes de dizer alguma coisa à pessoa? | `/utf-architecture` |
+| 1 | ~~Que validade dar à cobrança Pix ao criá-la? A escolha define quanto tempo o horário fica preso no nó X2.~~ | ✅ Resolvida: **15 minutos**, na RN03 do `prd.md` |
+| 2 | ~~Quanto tempo a tela de espera fica esperando antes de dizer alguma coisa à pessoa?~~ | ✅ Resolvida: desde o início a tela mostra o botão **Conferir pagamento**, que consulta o provedor quando o aviso demora (US03 e RN02 do `prd.md`) |
 
 ---
 
@@ -129,3 +132,7 @@ o aviso chegar — voltar do banco não confirma nada, só o aviso do provedor c
 | Data | Versão | O que mudou |
 | :--- | :----- | :---------- |
 | 2026-09-20 | 1.0.0 | Jornada de pagamento (US02+US03) via `/utf-flows` |
+| 2026-09-24 | 1.1.0 | Aviso do *pagamento* no lugar do *gateway*; vencimento do Pix percebido pelo próprio sistema, já que o provedor não avisa (RN03) |
+| 2026-09-26 | 1.2.0 | Pagamento fora do prazo confirma o horário se ele ainda estiver livre, sem *pagamento em revisão* (RN18, US12 removida) |
+| 2026-09-26 | 1.3.0 | Jornada passa a ser de uma **compra** com vários horários e um único Pix (RN22) |
+| 2026-10-12 | 1.3.1 | Revisão da Entrega 1: dúvida da validade do Pix marcada como resolvida pela RN03; dúvida da tela de espera resolvida pelo botão **Conferir pagamento** (US03, RN02) |

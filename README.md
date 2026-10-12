@@ -10,20 +10,21 @@ respondendo mensagem. Para donos de arena de areia e para quem quer jogar.
 
 ## Protótipo
 
-- Telas navegáveis: <https://learn-depth-46111132.figma.site/>
+- Telas navegáveis: <https://deer-quilt-67996631.figma.site/>
 
 ## Stack
 
-⏳ A definir no `/utf-architecture`.
+- **Backend:** NestJS, Prisma e PostgreSQL
+- **Frontend:** Vue e Tailwind CSS
+- **Pagamento:** AbacatePay (Pix, ambiente de testes)
 
 ## Em produção
 
-- **Aplicação:** ⏳ ainda não publicada
-- **API (Swagger):** ⏳ ainda não publicada
+⏳ A partir da Entrega 3.
 
 ## Quick Start
 
-⏳ A definir no `/utf-setup`.
+⏳ A partir da Entrega 2.
 
 ## Documentação do projeto
 

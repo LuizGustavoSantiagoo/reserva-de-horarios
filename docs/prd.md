@@ -1,8 +1,8 @@
 # 📄 Product Requirements Document (PRD)
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.1.0
-**Última atualização:** 2026-09-24
+**Versão:** 1.4.0
+**Última atualização:** 2026-10-12
 
 > 🤖 **Este documento é a fonte da verdade sobre o QUE o produto faz.** Regra de
 > negócio que não estiver aqui não existe — nem para a equipe, nem para a IA.
@@ -125,6 +125,9 @@ Pix **para que** os horários fiquem guardados no meu nome sem depender de conve
 - [ ] **Dado** que meu pagamento foi confirmado, **quando** vejo a tela de confirmação, **então** ela me mostra os horários reservados e o **código de cancelamento** da compra.
 - [ ] **Dado** um aviso com assinatura inválida ou segredo errado, **quando** ele chega, **então** é recusado e **nada muda** no estado da compra.
 - [ ] **Dado** o mesmo aviso chegando duas vezes, **quando** ele é processado, **então** a compra continua confirmada uma única vez, sem pagamento duplicado.
+- [ ] **Dado** que estou na tela de espera da confirmação, **quando** ela abre, **então** vejo, desde o início, a mensagem *"se a confirmação estiver demorando, use o botão para conferir"* e o botão **Conferir pagamento**.
+- [ ] **Dado** que o aviso de pagamento ainda não chegou, **quando** clico em **Conferir pagamento**, **então** o sistema pergunta ao provedor se a cobrança foi paga: se foi, a compra é confirmada como se o aviso tivesse chegado e vejo a confirmação com o código; se não foi, continuo na espera, avisado de que o pagamento ainda não foi identificado.
+- [ ] **Dado** que o aviso e a conferência pelo botão acontecem para a mesma compra, **quando** os dois são processados, **então** a compra é confirmada uma única vez, sem pagamento duplicado.
 
 **Regras relacionadas:** RN02, RN03, RN07, RN11, RN20, RN22
 
@@ -266,7 +269,7 @@ imprevisto de quem pediu cancelamento por fora.
 | ID | Regra | Usada em |
 | :-- | :---- | :------- |
 | RN01 | Um horário tem no máximo **uma retenção ativa**. Pré-reserva, reserva pendente e reserva confirmada ocupam o horário; expirada ou cancelada, não. | US02, US04 |
-| RN02 | A reserva só é confirmada pelo **aviso de pagamento do provedor**, e só depois de o aviso ser autenticado. Comprovante enviado pelo cliente não confirma nada. | US03 |
+| RN02 | A reserva só é confirmada pelo **provedor de pagamento**, por um de dois caminhos: o **aviso de pagamento**, depois de autenticado, ou a **consulta que o próprio sistema faz ao provedor** quando o cliente usa o botão **Conferir pagamento**. Nos dois, quem afirma que o Pix foi pago é o provedor, nunca o cliente: comprovante enviado pelo cliente não confirma nada. | US03 |
 | RN03 | A cobrança Pix nasce válida por **15 minutos**, contados do instante em que é gerada, e a reserva pendente cai quando essa validade termina. O provedor avisa quando o Pix é **pago**, mas **não avisa quando ele vence** — não existe aviso de vencimento para esperar. Quem percebe o fim do prazo e expira a reserva é o **próprio sistema**, por um caminho único; *como* isso é feito é assunto do `architecture.md`. | US03, US04 |
 | RN04 | Cancelamento **não gera reembolso** pelo sistema. | US05, US11 |
 | RN05 | O cliente é identificado por **nome e telefone**; não existe conta de cliente. | US02 |
@@ -340,3 +343,4 @@ imprevisto de quem pediu cancelamento por fora.
 | 2026-09-24 | 1.1.0 | Pagamento em ambiente de testes, sem dinheiro real (RN20); validade do Pix fixada em 15 min e expiração assumida pelo sistema, já que o provedor não avisa vencimento (RN03); pagamento fora do prazo passa a **reter o horário** em vez de deixá-lo à venda (RN18, US12); dúvidas em aberto fechadas |
 | 2026-09-26 | 1.2.0 | US12 removida: pagamento fora do prazo passa a **confirmar a reserva** se o horário ainda estiver livre, sem estado *pagamento em revisão* nem decisão do administrador (RN18, RN01, US04, US09) |
 | 2026-09-26 | 1.3.0 | Revisão das Issues: **compra** de vários horários com um Pix e um código, cancelamento parcial (RN22, US02–US05); quadra pode ser **inativada** (US07, RN14); horário fixo de **1 hora** (RN23, US08); agenda do dia mostra só os reservados (US09); aviso de tempo esgotado na tela de pagamento (US04) |
+| 2026-10-12 | 1.4.0 | Revisão da Entrega 1: botão **Conferir pagamento** na tela de espera, que consulta o provedor quando o aviso demora — a confirmação passa a vir do aviso autenticado **ou** da consulta do sistema ao provedor (RN02, US03) |
