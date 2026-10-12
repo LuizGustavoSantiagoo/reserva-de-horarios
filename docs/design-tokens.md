@@ -102,7 +102,8 @@ o sistema expirando a cobrança, e o efeito aparece nas telas 1 e 3 do cliente.
 2. **Revisão e dados** (US02) — horários escolhidos, total, nome e telefone, contador
    dos 3 minutos e aviso do horário que saiu da compra
 3. **Pix** (US02, US04) — um único Pix com a soma; aviso de cobrança vencida
-4. **Espera** (US03) — "estamos confirmando seu pagamento"
+4. **Espera** (US03) — "estamos confirmando seu pagamento" e o botão **Conferir pagamento**, visível desde o início
+   (⏳ **pendente no protótipo:** o botão entrou na revisão da Entrega 1 e ainda não foi desenhado)
 5. **Confirmação** (US03) — horários confirmados e o código de cancelamento
 6. **Cancelar com código** (US05) — escolher os horários e o aviso de que o valor pago
    não é devolvido; recusa genérica e bloqueio por tentativas

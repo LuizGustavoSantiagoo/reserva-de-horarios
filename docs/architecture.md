@@ -1,7 +1,7 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.0.0
+**Versão:** 1.1.0
 **Última atualização:** 2026-10-12
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
@@ -143,7 +143,9 @@ Prisma 7 e `create-vue`) e **Docker** para o banco local.
    - Rota pública **nunca** devolve telefone nem dado de pagamento (RN06): os DTOs de
      saída públicos são distintos dos administrativos.
 7. **Limite de tentativas (RN19).** `@nestjs/throttler` aplicado à rota de
-   cancelamento por código (5 tentativas a cada 10 minutos por origem) e ao login.
+   cancelamento por código (5 tentativas a cada 10 minutos por origem), ao login e à
+   conferência de pagamento (para que o botão não vire uma enxurrada de consultas ao
+   provedor).
 8. **Código de cancelamento (RN07).** Gerado com `crypto.randomBytes` (no mínimo 128
    bits de aleatoriedade), mostrado uma única vez ao cliente e guardado **só como
    hash**; a busca compara hashes.
@@ -170,6 +172,12 @@ Prisma 7 e `create-vue`) e **Docker** para o banco local.
       (`NestFactory.create(..., { rawBody: true })`) — garante a integridade.
       Falhou qualquer um, responde 401 e nada muda. O fake passa pelo mesmo
       verificador, com segredo próprio.
+    - **Conferência sob demanda (botão Conferir pagamento, US03).** Rota pública
+      que recebe só a compra e faz a API consultar o provedor
+      (`PaymentGateway`, consultar cobrança) com a própria chave, do lado do
+      servidor. Nada que o cliente envie afirma pagamento (RN02). Webhook e
+      conferência confirmam pelo **mesmo** método idempotente de confirmação do
+      módulo `payments/` — dois gatilhos, um caminho só.
     - **Idempotência:** todo aviso é gravado em `PaymentEvent` com
       `providerEventId` único; aviso repetido é reconhecido e não muda nada duas
       vezes. `Payment.providerChargeId` também é único.
@@ -462,6 +470,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | Data | Versão | O que mudou |
 | :--- | :----- | :---------- |
 | 2026-10-12 | 1.0.0 | Versão inicial via `/utf-architecture` |
+| 2026-10-12 | 1.1.0 | Revisão da Entrega 1: conferência de pagamento sob demanda pelo mesmo caminho de confirmação do webhook (RN02, US03) |
 
 ---
 
