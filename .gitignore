@@ -1,0 +1,27 @@
+# Dependências
+node_modules/
+
+# Artefatos de build e cobertura
+dist/
+build/
+.angular/
+coverage/
+*.tsbuildinfo
+
+# Cliente Prisma gerado
+generated/
+
+# Variáveis de ambiente — só os .env.example vão para o Git
+.env
+.env.*
+!.env.example
+
+# Testes e2e do Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Logs e cache
+*.log
+.eslintcache
