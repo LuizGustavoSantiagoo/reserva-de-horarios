@@ -1,6 +1,6 @@
 ---
 issue: 2
-status: rascunho   # rascunho | aprovada
+status: aprovada   # rascunho | aprovada
 ---
 
 # US01 — Ver a grade pública de horários
