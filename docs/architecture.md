@@ -1,8 +1,8 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.2.0
-**Última atualização:** 2026-10-16
+**Versão:** 1.3.0
+**Última atualização:** 2026-10-25
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
 > moram e como se chamam_.** Detalhe de tela — rota, componente, contrato —
@@ -166,10 +166,12 @@ repassam o comando a cada app com `npm --prefix`.
    `ExpirationService.expireDue()` — idempotente — marca como `EXPIRED` as
    pré-reservas com os 3 minutos vencidos e as compras pendentes com a cobrança
    vencida. Ele roda por **cron do `@nestjs/schedule` a cada minuto**, dentro da
-   API; nenhum outro código expira reserva. Como a hospedagem gratuita pode
-   hibernar o job, a leitura da grade também trata `expiresAt` vencido como livre —
-   leitura, não escrita: quem muda o status continua sendo só o
-   `ExpirationService`.
+   API; nenhum outro código expira reserva. A grade pública confia **só no status
+   gravado**: reserva `HELD` ou `PENDING` com o prazo vencido continua ocupando o
+   horário até o `ExpirationService` marcá-la como `EXPIRED`. Assim a grade nunca
+   mostra livre um horário que o índice único do item 4 ainda recusaria. O custo é o
+   horário ficar ocupado até cerca de um minuto além do prazo; com a API hibernada
+   ninguém lê a grade, e o cron volta a rodar quando ela acorda.
 10. **Integração de pagamento (ID20, ID21, RN20).** Fronteira única:
     - Interface `PaymentGateway` (criar cobrança Pix com validade de 15 min,
       consultar cobrança, verificar aviso) no módulo `payments/`. Duas
@@ -491,6 +493,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | 2026-10-12 | 1.0.0 | Versão inicial via `/utf-architecture` |
 | 2026-10-12 | 1.1.0 | Revisão da Entrega 1: conferência de pagamento sob demanda pelo mesmo caminho de confirmação do webhook (RN02, US03) |
 | 2026-10-16 | 1.2.0 | Ratificação do `/utf-setup`: npm 11+, scripts da raiz, `.env` da raiz para o Docker, `process.loadEnvFile()` no `prisma.config.ts` e saída do cliente Prisma |
+| 2026-10-25 | 1.3.0 | Spec da US01 (#2): a grade pública passa a confiar só no status gravado; prazo vencido segue ocupando o horário até o `ExpirationService` expirar a reserva (§2.1, item 9) |
 
 ---
 
