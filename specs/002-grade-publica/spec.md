@@ -29,8 +29,8 @@ um horário "já começou" quando o seu início é igual ou anterior ao instante
 - [ ] **CA3 — Dado** uma quadra sem agenda no dia escolhido, **quando** eu abro a grade dessa quadra nesse dia, **então** vejo uma mensagem dizendo que não há horários nesse dia, e não uma tela em branco.
 - [ ] **CA4 — Dado** um horário com reserva **confirmada**, **quando** eu olho a grade, **então** ele aparece como reservado com apenas o **primeiro nome** de quem reservou — a primeira palavra do nome, sem espaços nas pontas, com a primeira letra maiúscula e as demais minúsculas (`"  maria  da Silva "` → `"Maria"`) — e a resposta da rota pública nunca contém o telefone nem o nome completo.
 - [ ] **CA5 — Dado** um horário cujo início já passou, **quando** eu vejo a grade, **então**: se ele estiver livre ou em reserva, aparece como **indisponível** e não pode ser selecionado; se estiver reservado ou bloqueado, continua aparecendo como reservado (com o primeiro nome) ou bloqueado.
-- [ ] **CA6 — Dado** um horário com pré-reserva ou reserva pendente **dentro do prazo**, **quando** eu vejo a grade, **então** ele aparece como **em reserva**, sem nome de ninguém, e não pode ser selecionado.
-- [ ] **CA7 — Dado** um horário com pré-reserva cujos 3 minutos já venceram, ou com reserva pendente cuja cobrança já venceu, mas que o sistema ainda não marcou como expirada, **quando** eu vejo a grade, **então** ele aparece como **livre** (abandono — ver "Abandono no meio").
+- [ ] **CA6 — Dado** um horário com pré-reserva ou reserva pendente, **quando** eu vejo a grade, **então** ele aparece como **em reserva**, sem nome de ninguém, e não pode ser selecionado.
+- [ ] **CA7 — Dado** um horário com pré-reserva cujos 3 minutos já venceram, ou com reserva pendente cuja cobrança já venceu, **quando** eu vejo a grade antes de o sistema marcar essa reserva como expirada no banco, **então** ele continua como **em reserva**; só depois de a reserva estar marcada como expirada ou cancelada ele aparece como **livre** (abandono — ver "Abandono no meio").
 - [ ] **CA8 — Dado** horários livres na grade, **quando** eu toco em um deles, **então** ele fica marcado como selecionado; tocar de novo desmarca; a tela mostra "N horários selecionados"; a seleção se mantém ao trocar de quadra ou de dia; horários em reserva, reservados, bloqueados ou indisponíveis não reagem ao toque; e nenhum botão leva adiante para a reserva nesta história.
 - [ ] **CA9 — Dado** que estou com a grade aberta, **quando** passam 15 segundos, **então** a grade se atualiza sozinha; se um horário que eu tinha selecionado deixou de estar livre, ele sai da minha seleção e o contador é atualizado.
 - [ ] **CA10 — Dado** uma falha de rede ou erro do servidor, **quando** a grade é carregada pela primeira vez, **então** vejo uma mensagem de erro com o botão **Tentar de novo**; **quando** a falha acontece numa atualização automática, **então** continuo vendo a última grade carregada, com a minha seleção intacta, e um aviso "não foi possível atualizar".
@@ -43,7 +43,7 @@ um horário "já começou" quando o seu início é igual ou anterior ao instante
 - Mostrar o motivo de um bloqueio para o cliente.
 - Cadastrar ou editar quadras e agenda pelo painel — US07 (#8) e US08 (#9).
 - Criar bloqueio — US10 (#11).
-- Marcar reservas como expiradas: a grade só **lê** o prazo; quem muda o status é o `ExpirationService`, que nasce com a US02/US04.
+- Marcar reservas como expiradas: a grade só **lê** o status gravado; quem muda o status é o `ExpirationService`, que nasce com a US02/US04.
 - Liberar a pré-reserva no servidor quando o cliente é redirecionado de volta à grade ao fim dos 3 minutos — o redirecionamento é da US02 (#3), e a liberação exige antes alterar a `docs/architecture.md` (§2.1, item 9, hoje "nenhum outro código expira reserva").
 - Mostrar os dados da arena (nome e endereço) na grade.
 - Guardar a seleção depois de fechar a aba.
@@ -52,20 +52,22 @@ um horário "já começou" quando o seu início é igual ou anterior ao instante
 ## Abandono no meio
 
 **Nó X1 da Jornada 1 — some no formulário dentro dos 3 minutos.** A pré-reserva cai
-quando os 3 minutos vencem, mas quem muda o status é o job que roda a cada minuto, e a
-hospedagem gratuita pode hibernar esse job. Se a grade confiasse só no status gravado,
-um horário abandonado ficaria aparecendo "em reserva" até o job acordar — o horário
-fica preso exatamente como o PRD proíbe. Por isso a grade compara o prazo com o
-relógio na leitura: prazo vencido é livre, mesmo que o status ainda diga o contrário
-(CA7). O mesmo vale para o **nó X2** (some com o Pix na mão): a reserva pendente com a
-cobrança vencida aparece livre.
+quando os 3 minutos vencem, mas quem muda o status no banco é o job de expiração, que
+roda a cada minuto. Entre o fim do prazo e a passada do job, o horário continua
+**em reserva** na grade (CA7). Foi escolhido assim para a grade nunca mostrar livre um
+horário que o banco ainda considera ocupado: se mostrasse, o próximo cliente
+escolheria o horário e seria recusado ao tentar reservá-lo. O custo é o horário ficar
+preso por até cerca de um minuto a mais. A hospedagem gratuita pode hibernar a API,
+mas, hibernada, ninguém abre a grade; quando ela acorda, o job volta a rodar no
+minuto seguinte. O mesmo vale para o **nó X2** (some com o Pix na mão): a reserva
+pendente com a cobrança vencida segue em reserva até ser marcada como expirada.
 
 Decidido também que, quando o cliente **fica** na tela até os 3 minutos acabarem e é
-redirecionado à grade, o redirecionamento libera a pré-reserva no servidor. Isso
-complementa o CA7, não o substitui: quem **fecha a aba** nunca é redirecionado, e para
-essa pessoa só a leitura do prazo impede o horário de ficar preso. A liberação no
-redirecionamento entra na spec da US02 (#3), depois de a `docs/architecture.md` ser
-alterada (ver "Fora de escopo").
+redirecionado à grade, o redirecionamento libera a pré-reserva no servidor, sem
+esperar o job. Isso não cobre quem **fecha a aba**, que nunca é redirecionado: para
+essa pessoa, quem libera o horário é o job. A liberação no redirecionamento entra na
+spec da US02 (#3), depois de a `docs/architecture.md` ser alterada (ver "Fora de
+escopo").
 
 **Nó X3 — paga e fecha a aba.** Não muda a grade: o aviso de pagamento confirma a
 reserva sem a tela aberta, e a grade passa a mostrá-la como reservada (CA4).
