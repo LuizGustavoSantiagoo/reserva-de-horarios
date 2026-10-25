@@ -1,8 +1,8 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.1.0
-**Última atualização:** 2026-10-12
+**Versão:** 1.2.0
+**Última atualização:** 2026-10-16
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
 > moram e como se chamam_.** Detalhe de tela — rota, componente, contrato —
@@ -40,7 +40,20 @@
 Versões registradas pela **linha major** (conferidas na documentação oficial via
 Context7 em 2026-10-12); o pin exato vive no `package.json` de cada app.
 Ambiente de desenvolvimento: **Node.js 22.18+** (o mínimo comum a NestJS 12,
-Prisma 7 e `create-vue`) e **Docker** para o banco local.
+Prisma 7 e `create-vue`) com **npm 11+** (o npm 10 que acompanha o Node 22 quebra
+ao resolver as *peer dependencies* destes geradores) e **Docker** para o banco local.
+
+**Scripts da raiz.** O `package.json` da raiz não tem dependências: só atalhos que
+repassam o comando a cada app com `npm --prefix`.
+
+| Script | O que faz |
+| :----- | :-------- |
+| `npm run api` / `npm run web` | Sobe a API (`start:dev`) / o Vite (`dev`) |
+| `npm start` | `db:up` e depois API e web em paralelo |
+| `npm run db:up` / `npm run db:down` | `docker compose up -d --wait` / `docker compose down` |
+| `npm test` | Unitários da API e do web (`test:unit -- --run`) |
+| `npm run lint` | Lint da API e do web |
+| `npm run test:e2e` | E2E da API e do web |
 
 - **Backend:** **NestJS 12+** em módulos **ESM**, com **Prisma ORM 7+** (gerador
   `prisma-client`, configuração em `prisma.config.ts`, driver adapter
@@ -192,6 +205,10 @@ Prisma 7 e `create-vue`) e **Docker** para o banco local.
     `CORS_ORIGIN`, `PORT`. O repositório tem só o `.env.example`, com nomes e
     valores fictícios; `.env` está no `.gitignore`. Em produção, os valores vivem nos
     *secrets* da plataforma de hospedagem; no CI, nos *secrets* do GitHub Actions.
+    O `prisma.config.ts` carrega o `apps/api/.env` com o `process.loadEnvFile()`
+    nativo do Node (só se o arquivo existir — no CI ele não existe), sem a
+    dependência `dotenv`. O cliente Prisma é gerado em `apps/api/generated/prisma`
+    e fica fora do Git.
 12. **Tempo e dinheiro.** Instantes gravados em UTC (`timestamptz`); a grade e a
     agenda são calculadas no fuso `America/Sao_Paulo`. Dinheiro sempre em
     **centavos** (`Int`), nunca `Float`.
@@ -231,7 +248,9 @@ tudo daquele domínio junto. É essa pasta que o Mapa de Domínios (§6) aponta.
 ├── .github/               # template de PR, Portão de Entendimento e workflows do CI
 ├── CLAUDE.md  AGENTS.md   # carregam a constituição em toda sessão
 ├── README.md              # a vitrine: o que é e como rodar
+├── package.json           # só scripts de orquestração (§2), sem dependências
 ├── docker-compose.yml     # PostgreSQL 18 local (porta 5432)
+├── .env.example           # credenciais fictícias do Postgres local, lidas pelo docker-compose.yml
 ├── docs/                  # prd.md, user-flows.md, design-tokens.md, este arquivo, checklist.md e guias
 ├── specs/                 # uma pasta por história implementada
 └── apps/
@@ -443,7 +462,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 
 | Ambiente | Onde roda | Como conecta |
 | :--- | :--- | :--- |
-| **Local** | PostgreSQL 18 em container Docker, pelo `docker-compose.yml` da raiz | `DATABASE_URL` (e `DATABASE_URL_UNPOOLED`, com o mesmo valor) no `apps/api/.env`, copiado do `.env.example` e fora do Git |
+| **Local** | PostgreSQL 18 em container Docker, pelo `docker-compose.yml` da raiz, com usuário, senha e banco lidos do `.env` da raiz (copiado do `.env.example` da raiz e fora do Git) | `DATABASE_URL` (e `DATABASE_URL_UNPOOLED`, com o mesmo valor) no `apps/api/.env`, copiado do `apps/api/.env.example` e fora do Git — com as mesmas credenciais do `.env` da raiz |
 | **CI** | PostgreSQL 18 como *service container* do job no GitHub Actions, criado e descartado a cada execução | `DATABASE_URL` definida no próprio workflow, apontando para o container efêmero; `prisma migrate deploy` antes das suítes |
 | **Produção** | **Neon**, região **AWS São Paulo (`sa-east-1`)**, PostgreSQL 18 | `DATABASE_URL` com o endpoint **pooled** (`-pooler`) para a aplicação — o Connection Pooling recomendado no ID19 — e `DATABASE_URL_UNPOOLED` (conexão direta) para o `prisma migrate deploy`; as duas só nos *secrets* da plataforma de hospedagem |
 
@@ -471,6 +490,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | :--- | :----- | :---------- |
 | 2026-10-12 | 1.0.0 | Versão inicial via `/utf-architecture` |
 | 2026-10-12 | 1.1.0 | Revisão da Entrega 1: conferência de pagamento sob demanda pelo mesmo caminho de confirmação do webhook (RN02, US03) |
+| 2026-10-16 | 1.2.0 | Ratificação do `/utf-setup`: npm 11+, scripts da raiz, `.env` da raiz para o Docker, `process.loadEnvFile()` no `prisma.config.ts` e saída do cliente Prisma |
 
 ---
 
