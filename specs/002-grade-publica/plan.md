@@ -91,7 +91,7 @@ sobrescrito no `TestingModule`.
 
 ## Tarefas
 
-- [ ] **Tarefa 1 — Montar a persistência da API**
+- [x] **Tarefa 1 — Montar a persistência da API**
   - Cobre: passo técnico (destrava todas as outras; prepara o "Assume que" da spec)
   - Teste primeiro: (a) unitário: a validação do `ConfigModule` rejeita a falta de `DATABASE_URL`; (b) e2e: depois do seed, existem a arena, duas quadras ativas, uma inativa e as regras de agenda. Os dois falham porque nem módulo nem schema existem.
   - Arquivos previstos: `apps/api/src/config/`, `apps/api/src/prisma/prisma.module.ts`, `apps/api/src/prisma/prisma.service.ts`, `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/`, `apps/api/prisma/seed.ts`, `apps/api/prisma.config.ts`, `apps/api/src/app.module.ts`, `apps/api/test/helpers/db.ts`, `apps/api/test/seed.e2e-spec.ts`, `apps/api/.env.example`, `apps/api/package.json`
