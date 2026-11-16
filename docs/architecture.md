@@ -1,8 +1,8 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.2.0
-**Última atualização:** 2026-10-16
+**Versão:** 1.2.1
+**Última atualização:** 2026-11-15
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
 > moram e como se chamam_.** Detalhe de tela — rota, componente, contrato —
@@ -120,10 +120,13 @@ repassam o comando a cada app com `npm --prefix`.
    - `PrismaService` vive em um módulo global (`src/prisma/`) e é o único lugar que
      instancia o `PrismaClient`.
 2. **Validação de entrada (ID7).** Toda entrada (body, query, params) chega por um
-   **DTO** com decorators do `class-validator`. `ValidationPipe` **global** em
-   `main.ts` com `whitelist: true`, `forbidNonWhitelisted: true` e
-   `transform: true`: campo não declarado é recusado com 400. Erro de validação
-   responde no formato de erro do item 5, com o campo que falhou.
+   **DTO** com decorators do `class-validator`. `ValidationPipe` **global**, registrado
+   no `AppModule` com `APP_PIPE`, com `whitelist: true`, `forbidNonWhitelisted: true`
+   e `transform: true`: campo não declarado é recusado com 400. Erro de validação
+   responde no formato de erro do item 5, com o campo que falhou. O pipe, o
+   interceptor (`APP_INTERCEPTOR`) e o filtro (`APP_FILTER`) do item 5 moram no
+   `AppModule`, e não no `main.ts`, porque os testes de ponta a ponta montam o
+   `AppModule` sem passar pelo `main.ts` — registrados lá, ficariam fora dos testes.
 3. **Persistência (ID8).** Prisma 7 com o schema em `apps/api/prisma/schema.prisma`
    e migrations versionadas em `apps/api/prisma/migrations/` (`prisma migrate dev`
    local; `prisma migrate deploy` em CI e produção). A arena única (RN21) e o
@@ -258,8 +261,8 @@ tudo daquele domínio junto. É essa pasta que o Mapa de Domínios (§6) aponta.
     │   ├── prisma/        # schema.prisma, migrations/ e seed
     │   ├── prisma.config.ts
     │   ├── src/
-    │   │   ├── main.ts            # ValidationPipe, filtro, interceptor, Swagger, rawBody
-    │   │   ├── app.module.ts
+    │   │   ├── main.ts            # cabeçalhos de segurança, Swagger, rawBody
+    │   │   ├── app.module.ts      # APP_PIPE, APP_INTERCEPTOR e APP_FILTER (globais)
     │   │   ├── common/            # exception filter, interceptor, guards, decorators (@Public, @Roles)
     │   │   ├── config/            # ConfigModule e validação das variáveis
     │   │   ├── prisma/            # PrismaService (módulo global)
@@ -491,6 +494,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | 2026-10-12 | 1.0.0 | Versão inicial via `/utf-architecture` |
 | 2026-10-12 | 1.1.0 | Revisão da Entrega 1: conferência de pagamento sob demanda pelo mesmo caminho de confirmação do webhook (RN02, US03) |
 | 2026-10-16 | 1.2.0 | Ratificação do `/utf-setup`: npm 11+, scripts da raiz, `.env` da raiz para o Docker, `process.loadEnvFile()` no `prisma.config.ts` e saída do cliente Prisma |
+| 2026-11-15 | 1.2.1 | Padrões de API (manutenção): `ValidationPipe`, interceptor e filtro registrados no `AppModule` (`APP_PIPE`, `APP_INTERCEPTOR`, `APP_FILTER`); `main.ts` fica com os cabeçalhos de segurança (`app.useSecurityHeaders()`) e o Swagger |
 
 ---
 
