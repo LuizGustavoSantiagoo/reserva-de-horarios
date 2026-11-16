@@ -211,6 +211,13 @@ repassam o comando a cada app com `npm --prefix`.
     nativo do Node (só se o arquivo existir — no CI ele não existe), sem a
     dependência `dotenv`. O cliente Prisma é gerado em `apps/api/generated/prisma`
     e fica fora do Git.
+    **No frontend**, a única variável é `VITE_API_URL` (endereço da API), declarada
+    em `env.d.ts` e lida só em `src/api/client.ts`, sem endereço padrão no código.
+    Ela vai para o bundle, então não é segredo. No desenvolvimento, vem de
+    `apps/web/.env.development`, copiado do `apps/web/.env.example` e fora do Git; no
+    build de produção, do ambiente da hospedagem. Se ela faltar, o app cai ao
+    carregar o cliente, e não no meio de uma requisição, e o `vite build` emite um
+    aviso.
 12. **Tempo e dinheiro.** Instantes gravados em UTC (`timestamptz`); a grade e a
     agenda são calculadas no fuso `America/Sao_Paulo`. Dinheiro sempre em
     **centavos** (`Int`), nunca `Float`.
@@ -494,6 +501,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | 2026-10-12 | 1.1.0 | Revisão da Entrega 1: conferência de pagamento sob demanda pelo mesmo caminho de confirmação do webhook (RN02, US03) |
 | 2026-10-16 | 1.2.0 | Ratificação do `/utf-setup`: npm 11+, scripts da raiz, `.env` da raiz para o Docker, `process.loadEnvFile()` no `prisma.config.ts` e saída do cliente Prisma |
 | 2026-10-25 | 1.3.0 | Spec da US01 (#2): a grade pública passa a confiar só no status gravado; prazo vencido segue ocupando o horário até o `ExpirationService` expirar a reserva (§2.1, item 9) |
+| 2026-11-13 | 1.4.0 | Tarefa 2 da US01 (#2): `VITE_API_URL` registrada como a variável do frontend, sem endereço padrão no código (§2.1, item 11) |
 
 ---
 

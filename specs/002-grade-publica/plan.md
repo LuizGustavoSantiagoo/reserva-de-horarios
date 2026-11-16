@@ -96,7 +96,7 @@ sobrescrito no `TestingModule`.
   - Teste primeiro: (a) unitário: a validação do `ConfigModule` rejeita a falta de `DATABASE_URL`; (b) e2e: depois do seed, existem a arena, duas quadras ativas, uma inativa e as regras de agenda. Os dois falham porque nem módulo nem schema existem.
   - Arquivos previstos: `apps/api/src/config/`, `apps/api/src/prisma/prisma.module.ts`, `apps/api/src/prisma/prisma.service.ts`, `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/`, `apps/api/prisma/seed.ts`, `apps/api/prisma.config.ts`, `apps/api/src/app.module.ts`, `apps/api/test/helpers/db.ts`, `apps/api/test/seed.e2e-spec.ts`, `apps/api/.env.example`, `apps/api/package.json`
 
-- [ ] **Tarefa 2 — Montar a base do frontend**
+- [x] **Tarefa 2 — Montar a base do frontend**
   - Cobre: passo técnico (destrava as tarefas de tela)
   - Teste primeiro: unitário de `src/api/client.ts`: sucesso devolve o conteúdo de `data`; erro devolve um `ApiError` com `statusCode`, `message` e `fields`; falha de rede vira erro próprio. Falha porque o cliente não existe.
   - Arquivos previstos: `apps/web/src/api/client.ts`, `apps/web/src/api/client.spec.ts`, `apps/web/src/assets/main.css` (`@import "tailwindcss"` + `@theme` com os tokens de `docs/design-tokens.md`), `apps/web/vite.config.ts`, `apps/web/src/router/index.ts`, `apps/web/src/App.vue`, `apps/web/package.json` (Tailwind 4, `@tailwindcss/vite`, `openapi-typescript`, script `api:types`), remoção das views e componentes de exemplo do `create-vue`

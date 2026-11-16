@@ -4,5 +4,6 @@ import { test, expect } from '@playwright/test'
 // https://playwright.dev/docs/intro
 test('visits the app root url', async ({ page }) => {
   await page.goto('/')
-  await expect(page.locator('h1')).toHaveText('You did it!')
+  // TODO #2: a Tarefa 3 põe a grade em `/`; por ora, só confere que o app montou.
+  await expect(page.locator('#app main')).toBeAttached()
 })
