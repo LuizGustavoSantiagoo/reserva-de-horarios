@@ -1,7 +1,7 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.8.0
+**Versão:** 1.9.0
 **Última atualização:** 2026-11-22
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
@@ -340,9 +340,12 @@ porque espelham a interface, que é em português.
     `shared/`.
   - `shared/` não importa de `features/`.
 - **Token JWT (ID16).** O token do administrador fica em um composable de sessão
-  (`useSession`), em memória com cópia em `sessionStorage`: some ao fechar a aba. O
-  cliente HTTP anexa `Authorization: Bearer` a toda chamada administrativa; resposta
-  **401** limpa a sessão e leva ao login. As rotas `admin/` têm *navigation guard*
+  (`useSession`, em `shared/composables/`), em memória com cópia em `sessionStorage`:
+  some ao fechar a aba. O cliente HTTP (`src/api/client.ts`) anexa `Authorization:
+  Bearer` a toda chamada, quando há token guardado — e só ele monta esse cabeçalho;
+  sem token, o cabeçalho não vai. Resposta **401** limpa a sessão e leva ao login,
+  exceto na chamada que pede `{ sessionExpiry: false }` (o login, onde `401` é senha
+  errada). As rotas `admin/` têm *navigation guard*
   no Vue Router — conforto de UX; quem protege de verdade é o Guard da API.
 - **Assíncrono com estado visível.** Toda tela que busca dados trata os três
   estados: carregando, erro (com a mensagem do formato padrão da API) e vazio.
@@ -526,6 +529,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | 2026-11-22 | 1.6.0 | Tarefa 1 da US06 (#7): `AdminUser.role` passa a `ADMIN` \| `OPERATOR` (§5.1); `ADMIN_EMAIL` e `ADMIN_PASSWORD` lidas só pelo seed via `prisma.config.ts`, padrão de `JWT_EXPIRES_IN` (28800 s) e `JWT_SECRET` do CI gerado a cada execução (§2.1, item 11) |
 | 2026-11-22 | 1.7.0 | Tarefa 3 da US06 (#7): `@ApiBearerAuth()` nos controllers protegidos, e não só nos administrativos, e Swagger montado por `setupSwagger` em `src/common/swagger.ts` (§2.2); pasta `users/` na API, `APP_GUARD` no `app.module.ts`, `common/auth/` e o comentário do `main.ts` na árvore (§3) |
 | 2026-11-22 | 1.8.0 | Tarefa 4 da US06 (#7): `RolesGuard` global (segundo `APP_GUARD`) com `@Roles(...)` recebendo a lista de papéis, e não só `'ADMIN'`; 403 antes da validação do corpo (§2.1, item 6) |
+| 2026-11-22 | 1.9.0 | Tarefa 7 da US06 (#7): o cliente HTTP anexa o Bearer a toda chamada quando há token guardado, e não só às administrativas; `useSession` mora em `shared/composables/`; `401` com `{ sessionExpiry: false }` (login) não limpa a sessão (§4) |
 
 ---
 

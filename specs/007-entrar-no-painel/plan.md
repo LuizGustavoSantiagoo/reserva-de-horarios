@@ -321,7 +321,7 @@ linha no Histórico e versão nova a cada um):
     `apps/api/src/auth/auth.controller.ts`, `apps/api/test/auth.e2e-spec.ts`,
     `apps/api/package.json` (`@nestjs/throttler`)
 
-- [ ] **Tarefa 7 — Anexar o token às chamadas do frontend**
+- [x] **Tarefa 7 — Anexar o token às chamadas do frontend**
   - Cobre: CA14 (cabeçalho, ausência dele e limpeza da sessão no `401`; o
     redirecionamento com o aviso fecha na Tarefa 8)
   - Teste primeiro: unitário de `useSession` (`setToken` grava no `sessionStorage`; um
