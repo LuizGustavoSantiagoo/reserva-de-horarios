@@ -6,12 +6,14 @@ import { AppModule } from '../src/app.module.js';
 import { CLOCK } from '../src/common/clock.js';
 import type { Clock } from '../src/common/clock.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
-import { resetDatabase } from './helpers/db.js';
+import { createReservation, resetDatabase } from './helpers/db.js';
 
 // 2030-06-02 é um domingo (weekday 0) e 2030-06-03, uma segunda (weekday 1).
 // São Paulo está em UTC-3: 8h em São Paulo são 11h em UTC.
 const SUNDAY = '2030-06-02';
 const MONDAY = '2030-06-03';
+// 2030-06-04 é uma terça (weekday 2), sem agenda na quadra dos testes.
+const TUESDAY = '2030-06-04';
 // 6h de domingo em São Paulo: antes de qualquer horário da agenda do dia.
 const SUNDAY_6AM_SP = new Date('2030-06-02T09:00:00.000Z');
 // 22h de domingo em São Paulo: em UTC já é segunda-feira, 1h.
@@ -81,6 +83,16 @@ describe('grade pública (e2e)', () => {
           { id: court2, name: 'Quadra 2' },
         ],
       });
+    });
+
+    it('sem nenhuma quadra ativa, devolve uma lista vazia', async () => {
+      await createCourt('Quadra 3', false);
+
+      const response = await request(app.getHttpServer())
+        .get('/courts')
+        .expect(200);
+
+      expect(response.body).toEqual({ data: [] });
     });
   });
 
@@ -195,6 +207,282 @@ describe('grade pública (e2e)', () => {
             },
           ],
         },
+      });
+    });
+
+    it('num dia sem agenda, devolve a grade com a lista de horários vazia', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/courts/${courtId}/slots`)
+        .query({ date: TUESDAY })
+        .expect(200);
+
+      expect(response.body).toEqual({
+        data: { courtId, date: TUESDAY, today: SUNDAY, slots: [] },
+      });
+    });
+
+    it('às 9h de São Paulo, o horário livre que já começou fica indisponível e o bloqueado que começa agora continua bloqueado', async () => {
+      now = new Date('2030-06-02T12:00:00.000Z');
+
+      const response = await request(app.getHttpServer())
+        .get(`/courts/${courtId}/slots`)
+        .expect(200);
+
+      const slots = (
+        response.body as {
+          data: { slots: { startsAt: string; status: string }[] };
+        }
+      ).data.slots;
+      expect(
+        slots.map(({ startsAt, status }) => ({ startsAt, status })),
+      ).toEqual([
+        { startsAt: '2030-06-02T11:00:00.000Z', status: 'UNAVAILABLE' },
+        { startsAt: '2030-06-02T12:00:00.000Z', status: 'BLOCKED' },
+        { startsAt: '2030-06-02T21:00:00.000Z', status: 'FREE' },
+        { startsAt: '2030-06-02T22:00:00.000Z', status: 'FREE' },
+      ]);
+    });
+
+    describe('link inválido (CA11)', () => {
+      type ErrorBody = {
+        statusCode: number;
+        error: string;
+        message: string;
+        fields?: Record<string, string[]>;
+        path: string;
+        timestamp: string;
+      };
+
+      // `path` e `timestamp` variam por natureza; o resto precisa ser idêntico.
+      function withoutPathAndTime(body: ErrorBody) {
+        const { path: _path, timestamp: _timestamp, ...rest } = body;
+        return rest;
+      }
+
+      it('quadra inexistente, inativa e id que não é UUID respondem o mesmo 404 "Quadra não encontrada"', async () => {
+        const inactive = await createCourt('Quadra Inativa', false);
+        await addRule(inactive, 0, 8, 10);
+        const ids = [
+          '00000000-0000-4000-8000-000000000000',
+          inactive,
+          'nao-e-um-uuid',
+        ];
+
+        const bodies = [];
+        for (const id of ids) {
+          const response = await request(app.getHttpServer())
+            .get(`/courts/${id}/slots`)
+            .expect(404);
+          bodies.push(withoutPathAndTime(response.body as ErrorBody));
+        }
+
+        expect(bodies[0]).toEqual({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Quadra não encontrada',
+        });
+        expect(bodies[1]).toEqual(bodies[0]);
+        expect(bodies[2]).toEqual(bodies[0]);
+      });
+
+      it.each([
+        ['mal formada', '02-06-2030'],
+        ['sem zero à esquerda', '2030-6-2'],
+        ['com hora', '2030-06-02T00:00:00Z'],
+        ['texto qualquer', 'amanha'],
+        ['impossível (30 de fevereiro)', '2030-02-30'],
+        ['impossível (mês 13)', '2030-13-01'],
+      ])('data %s responde 400 apontando o campo date', async (_caso, date) => {
+        const response = await request(app.getHttpServer())
+          .get(`/courts/${courtId}/slots`)
+          .query({ date })
+          .expect(400);
+
+        const body = response.body as ErrorBody;
+        expect(body.statusCode).toBe(400);
+        expect(Object.keys(body.fields ?? {})).toEqual(['date']);
+        expect(body.fields?.date.length).toBeGreaterThan(0);
+      });
+
+      it('data antes de hoje em São Paulo responde 400 no mesmo formato, apontando o campo date', async () => {
+        const response = await request(app.getHttpServer())
+          .get(`/courts/${courtId}/slots`)
+          .query({ date: '2030-06-01' })
+          .expect(400);
+
+        const body = response.body as ErrorBody;
+        expect(withoutPathAndTime(body)).toEqual({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Dados inválidos.',
+          fields: { date: ['Não é possível ver um dia que já passou.'] },
+        });
+      });
+
+      it('às 22h de São Paulo, quando em UTC já é o dia seguinte, o dia de São Paulo ainda não passou', async () => {
+        now = SUNDAY_10PM_SP;
+
+        await request(app.getHttpServer())
+          .get(`/courts/${courtId}/slots`)
+          .query({ date: SUNDAY })
+          .expect(200);
+      });
+    });
+
+    describe('com reservas', () => {
+      // Prazo já vencido segundo o CLOCK (5h de São Paulo, antes das 6h do `now`).
+      const EXPIRED_DEADLINE = new Date('2030-06-02T08:00:00.000Z');
+      const MARIA_PHONE = '11987654321';
+      const PEDRO_PHONE = '21912345678';
+      let reservedCourt: string;
+
+      // Horas cheias de domingo em São Paulo (UTC-3).
+      const at = (hour: number): Date =>
+        new Date(`2030-06-02T${String(hour + 3).padStart(2, '0')}:00:00.000Z`);
+
+      beforeEach(async () => {
+        reservedCourt = await createCourt('Quadra Reservas');
+        await addRule(reservedCourt, 0, 8, 14);
+        // 8h: confirmada.
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(8),
+          status: 'CONFIRMED',
+          holdExpiresAt: EXPIRED_DEADLINE,
+          customerName: '  maria  da Silva ',
+          customerPhone: MARIA_PHONE,
+        });
+        // 9h: pré-reserva com os 3 minutos vencidos, ainda HELD no banco (CA7).
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(9),
+          status: 'HELD',
+          holdExpiresAt: EXPIRED_DEADLINE,
+        });
+        // 10h: pendente com a cobrança vencida, ainda PENDING no banco (CA7).
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(10),
+          status: 'PENDING',
+          holdExpiresAt: EXPIRED_DEADLINE,
+          customerName: 'Pedro Alves',
+          customerPhone: PEDRO_PHONE,
+        });
+        // 11h: já marcada como expirada; 12h: cancelada.
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(11),
+          status: 'EXPIRED',
+          holdExpiresAt: EXPIRED_DEADLINE,
+        });
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(12),
+          status: 'CANCELLED',
+          holdExpiresAt: EXPIRED_DEADLINE,
+          customerName: 'Bruno Lima',
+          customerPhone: '31900000000',
+        });
+        // 13h: uma expirada e, depois dela, uma pré-reserva nova no mesmo horário.
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(13),
+          status: 'EXPIRED',
+          holdExpiresAt: EXPIRED_DEADLINE,
+        });
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(13),
+          status: 'HELD',
+          holdExpiresAt: new Date('2030-06-02T09:03:00.000Z'),
+        });
+      });
+
+      it('mostra reservado só com o primeiro nome, em reserva sem nome mesmo com o prazo vencido, e livre o que expirou ou foi cancelado', async () => {
+        const response = await request(app.getHttpServer())
+          .get(`/courts/${reservedCourt}/slots`)
+          .expect(200);
+
+        const slots = (
+          response.body as {
+            data: { slots: Record<string, unknown>[] };
+          }
+        ).data.slots;
+        expect(
+          slots.map(({ startsAt, status, firstName }) => ({
+            startsAt,
+            status,
+            firstName,
+          })),
+        ).toEqual([
+          {
+            startsAt: at(8).toISOString(),
+            status: 'RESERVED',
+            firstName: 'Maria',
+          },
+          { startsAt: at(9).toISOString(), status: 'HELD' },
+          { startsAt: at(10).toISOString(), status: 'HELD' },
+          { startsAt: at(11).toISOString(), status: 'FREE' },
+          { startsAt: at(12).toISOString(), status: 'FREE' },
+          { startsAt: at(13).toISOString(), status: 'HELD' },
+        ]);
+        // `firstName` só existe no horário reservado.
+        expect(slots.filter((slot) => 'firstName' in slot)).toHaveLength(1);
+      });
+
+      it('às 11h de São Paulo, o que já começou livre ou em reserva fica indisponível e o reservado continua com o primeiro nome', async () => {
+        now = at(11);
+
+        const response = await request(app.getHttpServer())
+          .get(`/courts/${reservedCourt}/slots`)
+          .expect(200);
+
+        const slots = (
+          response.body as {
+            data: { slots: Record<string, unknown>[] };
+          }
+        ).data.slots;
+        expect(
+          slots.map(({ startsAt, status, firstName }) => ({
+            startsAt,
+            status,
+            firstName,
+          })),
+        ).toEqual([
+          {
+            startsAt: at(8).toISOString(),
+            status: 'RESERVED',
+            firstName: 'Maria',
+          },
+          // 9h HELD e 10h PENDING já começaram.
+          { startsAt: at(9).toISOString(), status: 'UNAVAILABLE' },
+          { startsAt: at(10).toISOString(), status: 'UNAVAILABLE' },
+          // 11h (expirada, ou seja, livre) começa exatamente agora.
+          { startsAt: at(11).toISOString(), status: 'UNAVAILABLE' },
+          { startsAt: at(12).toISOString(), status: 'FREE' },
+          { startsAt: at(13).toISOString(), status: 'HELD' },
+        ]);
+      });
+
+      it('a resposta pública nunca contém telefone, nome completo nem o nome de quem não confirmou', async () => {
+        const response = await request(app.getHttpServer())
+          .get(`/courts/${reservedCourt}/slots`)
+          .expect(200);
+
+        const body = JSON.stringify(response.body);
+        expect(body).toContain('Maria');
+        for (const secret of [
+          MARIA_PHONE,
+          PEDRO_PHONE,
+          '31900000000',
+          'Silva',
+          'maria  da',
+          'Pedro',
+          'Alves',
+          'Bruno',
+        ]) {
+          expect(body).not.toContain(secret);
+        }
       });
     });
   });

@@ -80,7 +80,7 @@ de ninguém.
 > Toda story nasce `⚪ Draft` — **só o aluno promove a `🟡 Ready`**; `🟢 Live` é
 > quando o PR da história mescla.
 
-### US01 — Ver a grade pública de horários · `Must Have` · `S` · Status: `🟡 Ready`
+### US01 — Ver a grade pública de horários · `Must Have` · `S` · Status: `🟢 Live`
 
 **Como** cliente, **eu quero** ver os horários de uma quadra em um dia **para que**
 eu saiba o que está livre sem perguntar para ninguém.

@@ -1,7 +1,7 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.10.0
+**Versão:** 1.11.0
 **Última atualização:** 2026-11-22
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
@@ -127,6 +127,10 @@ repassam o comando a cada app com `npm --prefix`.
    interceptor (`APP_INTERCEPTOR`) e o filtro (`APP_FILTER`) do item 5 moram no
    `AppModule`, e não no `main.ts`, porque os testes de ponta a ponta montam o
    `AppModule` sem passar pelo `main.ts` — registrados lá, ficariam fora dos testes.
+   **Exceção:** o param de um recurso cuja existência não pode ser revelada (ex.: a
+   quadra da grade pública, inexistente ou inativa) é validado no **service** e
+   responde **404** — inclusive quando nem tem o formato de id —, e não 400 pelo DTO;
+   assim a resposta é idêntica em todos os casos.
 3. **Persistência (ID8).** Prisma 7 com o schema em `apps/api/prisma/schema.prisma`
    e migrations versionadas em `apps/api/prisma/migrations/` (`prisma migrate dev`
    local; `prisma migrate deploy` em CI e produção). A arena única (RN21) e o
@@ -519,6 +523,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 
 | Domínio | Módulo (pasta) | Guard | Dados (repository) | US |
 | :------ | :------------- | :---- | :----------------- | :-- |
+| Grade pública | `apps/api/src/slots/` (lê courts, schedules, blocks e purchases pelos services exportados) + `apps/web/src/features/grade/` | sem guard (rota pública) | `PrismaService` nos services | US01 |
 | Autenticação e usuários do painel | `apps/api/src/auth/`, `apps/api/src/users/` e `apps/api/src/common/auth/` + `apps/web/src/features/admin/` | `AuthGuard` + `RolesGuard` globais; `@Public()` no login; `@Roles('ADMIN')` em `POST /users` e `GET /users` | `AdminUser` via `PrismaService` no `UsersService` | US06 |
 
 ---
@@ -539,6 +544,8 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | 2026-11-22 | 1.8.0 | Tarefa 4 da US06 (#7): `RolesGuard` global (segundo `APP_GUARD`) com `@Roles(...)` recebendo a lista de papéis, e não só `'ADMIN'`; 403 antes da validação do corpo (§2.1, item 6) |
 | 2026-11-22 | 1.9.0 | Tarefa 7 da US06 (#7): o cliente HTTP anexa o Bearer a toda chamada quando há token guardado, e não só às administrativas; `useSession` mora em `shared/composables/`; `401` com `{ sessionExpiry: false }` (login) não limpa a sessão (§4) |
 | 2026-11-22 | 1.10.0 | Fechamento da US06 (#7): indentação da pasta `users/` e `features/admin/session-expired.ts` como exceção à forma de `features/` (§3); `useSession` guarda também o perfil, só em memória, e o guard do painel barra por papel via `meta.roles` (§4); linha de autenticação e usuários no Mapa de Domínios (§6) |
+| 2026-11-22 | 1.6.0 (branch da US01) | Fechamento da US01 (#2): exceção do param validado no service com 404 (§2.1, item 2) e linha da grade pública no Mapa de Domínios (§6) |
+| 2026-11-22 | 1.11.0 | Merge da branch da US01 (#2) na da US06 (#7): reúne o fechamento da US01 (1.6.0 da branch da US01: exceção do 404 no service e linha da grade no §6) com a 1.6.0–1.10.0 da US06 |
 
 ---
 

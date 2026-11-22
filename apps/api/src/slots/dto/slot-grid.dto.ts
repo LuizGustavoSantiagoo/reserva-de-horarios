@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SLOT_STATUSES } from '../slot-status.js';
 import type { SlotStatus } from '../slot-status.js';
 
@@ -20,6 +20,13 @@ export class SlotDto {
 
   @ApiProperty({ enum: SLOT_STATUSES, enumName: 'SlotStatus' })
   status: SlotStatus;
+
+  @ApiPropertyOptional({
+    example: 'Maria',
+    description:
+      'Primeiro nome de quem reservou; só existe em `RESERVED`. A rota pública nunca devolve telefone nem nome completo',
+  })
+  firstName?: string;
 }
 
 /** A grade de uma quadra em um dia. */

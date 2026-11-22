@@ -106,40 +106,45 @@ sobrescrito no `TestingModule`.
   - Teste primeiro: e2e de `GET /courts` (só as ativas) e de `GET /courts/:id/slots` (horários de 1 h na ordem da agenda, um `BLOCKED` onde há bloqueio, envelope `{ data }`; sem `date`, devolve a grade do dia de hoje em São Paulo segundo o `CLOCK`, com `today` preenchido, inclusive às 22h de São Paulo, quando em UTC já é o dia seguinte); unitário de `slot-status.ts` (bloqueado vence livre); componente `GradePage` (lista as quadras, escolhe a primeira, abre no dia que a API devolveu e mostra "livre" e "bloqueado"). Falham porque não existem rota, função nem página.
   - Arquivos previstos: `apps/api/src/main.ts` (pipe, filtro, interceptor, Swagger), `apps/api/src/common/` (filtro, interceptor, `clock.ts`), `apps/api/src/courts/`, `apps/api/src/slots/` (módulo, controller, service, `dto/`, `slot-status.ts`, `sao-paulo-time.ts`), `apps/api/test/slots.e2e-spec.ts`, `apps/web/src/features/grade/` (`pages/GradePage.vue`, `components/CourtPicker.vue`, `components/DayPicker.vue`, `components/SlotList.vue`, `components/SlotItem.vue`, `services/grade.service.ts` e specs)
 
-- [ ] **Tarefa 4 — Mostrar o que as reservas ocupam, sem expor o cliente**
+- [x] **Tarefa 4 — Mostrar o que as reservas ocupam, sem expor o cliente**
   - Cobre: CA4, CA6, CA7
   - Teste primeiro: unitários de `first-name.ts` (`"  maria  da Silva "` → `"Maria"`, `"JOÃO"` → `"João"`) e de `slot-status.ts` (confirmada → `RESERVED`; `HELD` ou `PENDING` → `HELD`, inclusive com `holdExpiresAt` já vencido; `EXPIRED` ou `CANCELLED` → `FREE`); e2e verificando que o corpo de `GET /courts/:id/slots` não contém o telefone nem o sobrenome; componente mostrando "reservado · Maria" e "em reserva" sem nome. Falham porque a função ainda ignora reservas.
   - Arquivos previstos: `apps/api/src/slots/first-name.ts`, `apps/api/src/slots/slot-status.ts`, `apps/api/src/slots/slots.service.ts`, `apps/api/src/slots/dto/`, `apps/api/test/slots.e2e-spec.ts`, `apps/web/src/features/grade/components/SlotItem.vue` e spec
 
-- [ ] **Tarefa 5 — Marcar como indisponível o horário que já começou**
+- [x] **Tarefa 5 — Marcar como indisponível o horário que já começou**
   - Cobre: CA5
   - Teste primeiro: unitário de `slot-status.ts` com relógio fixo: início igual ou anterior ao `now`, livre ou em reserva → `UNAVAILABLE`; reservado ou bloqueado mantém a situação; e2e com o `CLOCK` sobrescrito; componente mostrando "indisponível". Falham porque a função não olha o relógio.
   - Arquivos previstos: `apps/api/src/slots/slot-status.ts`, `apps/api/test/slots.e2e-spec.ts`, `apps/web/src/features/grade/components/SlotItem.vue` e spec
 
-- [ ] **Tarefa 6 — Mostrar mensagens de grade vazia**
+- [x] **Tarefa 6 — Mostrar mensagens de grade vazia**
   - Cobre: CA2, CA3
   - Teste primeiro: e2e de `GET /courts` → `[]` sem quadra ativa e de `GET /courts/:id/slots` → `slots: []` num dia sem agenda; componente mostrando "nenhuma quadra disponível" (sem seletor de dia) e a mensagem de dia sem horários. Falham porque a página não trata lista vazia.
   - Arquivos previstos: `apps/api/test/slots.e2e-spec.ts`, `apps/web/src/features/grade/pages/GradePage.vue`, `apps/web/src/features/grade/components/SlotList.vue` e specs
 
-- [ ] **Tarefa 7 — Recusar link de quadra ou dia inválido**
+- [x] **Tarefa 7 — Recusar link de quadra ou dia inválido**
   - Cobre: CA11
   - Teste primeiro: e2e: `courtId` inexistente, inativo e não-UUID respondem o **mesmo** `404`; data mal formada, impossível ou passada responde `400` com `fields.date`; componente: a mensagem da API aparece com o botão "voltar para hoje", que pede a grade sem `date`; o `DayPicker` não navega para antes do `today` devolvido pela API, mesmo com o relógio do aparelho num dia diferente. Falham porque a rota ainda não valida e a página não trata o erro.
   - Arquivos previstos: `apps/api/src/slots/` (controller, service, `dto/`), `apps/api/src/common/` (filtro), `apps/api/test/slots.e2e-spec.ts`, `apps/web/src/features/grade/pages/GradePage.vue`, `apps/web/src/features/grade/components/DayPicker.vue` e specs
 
-- [ ] **Tarefa 8 — Selecionar horários livres**
+- [x] **Tarefa 8 — Selecionar horários livres**
   - Cobre: CA8
   - Teste primeiro: componente: tocar num livre marca e o contador mostra "1 horário selecionado"; tocar de novo desmarca; trocar de quadra e de dia mantém a seleção; tocar em em reserva, reservado, bloqueado ou indisponível não muda nada; não existe botão de avançar. Falha porque a seleção não existe.
   - Arquivos previstos: `apps/web/src/features/grade/pages/GradePage.vue`, `apps/web/src/features/grade/components/SlotItem.vue`, `apps/web/src/features/grade/components/SlotList.vue` e specs
 
-- [ ] **Tarefa 9 — Atualizar a grade a cada 15 segundos**
+- [x] **Tarefa 9 — Atualizar a grade a cada 15 segundos**
   - Cobre: CA9
   - Teste primeiro: componente com timers falsos: depois de 15 s o service é chamado de novo; um horário selecionado que voltou como `HELD` sai da seleção e o contador cai; o intervalo é limpo ao desmontar a página. Falha porque não há polling.
   - Arquivos previstos: `apps/web/src/features/grade/pages/GradePage.vue` e spec
 
-- [ ] **Tarefa 10 — Tratar falha de rede na grade**
+- [x] **Tarefa 10 — Tratar falha de rede na grade**
   - Cobre: CA10
   - Teste primeiro: componente: falha na primeira carga mostra o erro e "Tentar de novo", e o botão recarrega; falha no polling mantém a última grade e a seleção, e mostra "não foi possível atualizar"; o aviso some na próxima atualização bem-sucedida. Falha porque a página não distingue as duas falhas.
   - Arquivos previstos: `apps/web/src/features/grade/pages/GradePage.vue` e spec
+
+- [x] **Tarefa 11 — Fechar a história: pendências do auditor final**
+  - Cobre: CA11 (recusa da quadra também quando ela some com a grade aberta) e as pendências da auditoria final (documentação e dívida marcada com `TODO #2`)
+  - Teste primeiro: componente: com a grade aberta, uma atualização automática que recebe a recusa da quadra (quadra desativada ou inexistente) mostra a mensagem da recusa com "Voltar para hoje", em vez do aviso "não foi possível atualizar"; e2e do web (`apps/web/e2e/vue.spec.ts`) deixa de ser provisório: confere que a página da grade monta em `/` (título "Escolha seus horários"), sem o `TODO #2`. Falham porque o polling trata a recusa da quadra como falha comum e o e2e ainda é o provisório.
+  - Arquivos previstos: `apps/web/src/features/grade/pages/GradePage.vue` e spec, `apps/web/e2e/vue.spec.ts`, `docs/architecture.md` (§2.1 item 2: param de recurso cuja existência não pode ser revelada é validado no service e responde 404; §6: linha da US01 no mapa de domínios; Histórico)
 
 ## Critérios sem tarefa
 
