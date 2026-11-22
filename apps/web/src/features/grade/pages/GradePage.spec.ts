@@ -126,4 +126,32 @@ describe('GradePage', () => {
       'segunda-feira, 23 de novembro',
     )
   })
+
+  it('sem nenhuma quadra ativa, mostra "nenhuma quadra disponível" sem seletor de quadra nem de dia', async () => {
+    listCourtsMock.mockResolvedValue([])
+
+    const wrapper = mount(GradePage)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Nenhuma quadra disponível')
+    expect(wrapper.text()).not.toContain('Carregando')
+    expect(wrapper.find('select').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label="Próximo dia"]').exists()).toBe(false)
+    expect(getSlotsMock).not.toHaveBeenCalled()
+  })
+
+  it('num dia sem agenda, mantém os seletores e mostra que não há horários nesse dia', async () => {
+    getSlotsMock.mockImplementation(async (courtId, date) => ({
+      ...grid(courtId, date ?? '2026-11-22'),
+      slots: [],
+    }))
+
+    const wrapper = mount(GradePage)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Não há horários neste dia')
+    expect(wrapper.find('select').exists()).toBe(true)
+    expect(wrapper.find('button[aria-label="Próximo dia"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(0)
+  })
 })

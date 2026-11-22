@@ -12,6 +12,8 @@ import { createReservation, resetDatabase } from './helpers/db.js';
 // São Paulo está em UTC-3: 8h em São Paulo são 11h em UTC.
 const SUNDAY = '2030-06-02';
 const MONDAY = '2030-06-03';
+// 2030-06-04 é uma terça (weekday 2), sem agenda na quadra dos testes.
+const TUESDAY = '2030-06-04';
 // 6h de domingo em São Paulo: antes de qualquer horário da agenda do dia.
 const SUNDAY_6AM_SP = new Date('2030-06-02T09:00:00.000Z');
 // 22h de domingo em São Paulo: em UTC já é segunda-feira, 1h.
@@ -81,6 +83,16 @@ describe('grade pública (e2e)', () => {
           { id: court2, name: 'Quadra 2' },
         ],
       });
+    });
+
+    it('sem nenhuma quadra ativa, devolve uma lista vazia', async () => {
+      await createCourt('Quadra 3', false);
+
+      const response = await request(app.getHttpServer())
+        .get('/courts')
+        .expect(200);
+
+      expect(response.body).toEqual({ data: [] });
     });
   });
 
@@ -195,6 +207,17 @@ describe('grade pública (e2e)', () => {
             },
           ],
         },
+      });
+    });
+
+    it('num dia sem agenda, devolve a grade com a lista de horários vazia', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/courts/${courtId}/slots`)
+        .query({ date: TUESDAY })
+        .expect(200);
+
+      expect(response.body).toEqual({
+        data: { courtId, date: TUESDAY, today: SUNDAY, slots: [] },
       });
     });
 

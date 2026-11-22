@@ -6,7 +6,8 @@ import SlotList from '../components/SlotList.vue'
 import { getSlots, listCourts } from '../services/grade.service'
 import type { Court, SlotGrid } from '../services/grade.service'
 
-const courts = ref<Court[]>([])
+// `undefined` enquanto a lista de quadras não chegou; `[]` quando não há quadra ativa.
+const courts = ref<Court[]>()
 const courtId = ref<string>()
 const grid = ref<SlotGrid>()
 
@@ -20,7 +21,7 @@ const dayFormat = new Intl.DateTimeFormat('pt-BR', {
 
 // O cabeçalho descreve a grade em exibição, não a quadra que ainda está carregando.
 const courtName = computed(
-  () => courts.value.find((court) => court.id === grid.value?.courtId)?.name,
+  () => courts.value?.find((court) => court.id === grid.value?.courtId)?.name,
 )
 const dayLabel = computed(() =>
   grid.value ? dayFormat.format(new Date(`${grid.value.date}T00:00:00.000Z`)) : '',
@@ -55,7 +56,10 @@ onMounted(async () => {
       <h1 class="text-titulo-pagina">Escolha seus horários</h1>
       <p class="text-corpo text-texto-suave">Escolha a quadra e o dia para ver o que está livre.</p>
     </header>
-    <p v-if="!grid" class="text-legenda text-texto-suave">Carregando a grade…</p>
+    <p v-if="courts?.length === 0" class="text-legenda text-texto-suave">
+      Nenhuma quadra disponível.
+    </p>
+    <p v-else-if="!courts || !grid" class="text-legenda text-texto-suave">Carregando a grade…</p>
     <section
       v-else
       aria-label="Grade de horários"

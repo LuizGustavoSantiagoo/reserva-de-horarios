@@ -116,7 +116,7 @@ sobrescrito no `TestingModule`.
   - Teste primeiro: unitário de `slot-status.ts` com relógio fixo: início igual ou anterior ao `now`, livre ou em reserva → `UNAVAILABLE`; reservado ou bloqueado mantém a situação; e2e com o `CLOCK` sobrescrito; componente mostrando "indisponível". Falham porque a função não olha o relógio.
   - Arquivos previstos: `apps/api/src/slots/slot-status.ts`, `apps/api/test/slots.e2e-spec.ts`, `apps/web/src/features/grade/components/SlotItem.vue` e spec
 
-- [ ] **Tarefa 6 — Mostrar mensagens de grade vazia**
+- [x] **Tarefa 6 — Mostrar mensagens de grade vazia**
   - Cobre: CA2, CA3
   - Teste primeiro: e2e de `GET /courts` → `[]` sem quadra ativa e de `GET /courts/:id/slots` → `slots: []` num dia sem agenda; componente mostrando "nenhuma quadra disponível" (sem seletor de dia) e a mensagem de dia sem horários. Falham porque a página não trata lista vazia.
   - Arquivos previstos: `apps/api/test/slots.e2e-spec.ts`, `apps/web/src/features/grade/pages/GradePage.vue`, `apps/web/src/features/grade/components/SlotList.vue` e specs
