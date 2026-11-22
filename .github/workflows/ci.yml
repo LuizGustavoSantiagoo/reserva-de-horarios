@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  # O nome do job é o nome do check exigido no ruleset da main.
+  testes:
+    runs-on: ubuntu-latest
+
+    services:
+      # Banco descartável: nasce com o job e morre com ele, sem dado real e sem
+      # porta aberta para fora do runner. Por isso as credenciais abaixo podem
+      # ficar escritas aqui. Nenhum segredo de verdade entra neste arquivo — a
+      # DATABASE_URL de produção (Neon) vive só nos secrets da hospedagem.
+      postgres:
+        image: postgres:18 # mesma major do docker-compose.yml
+        env:
+          POSTGRES_USER: reserva
+          POSTGRES_PASSWORD: reserva-ci
+          POSTGRES_DB: reserva
+        ports: ['5432:5432']
+        # Sem o health check, os testes começam antes de o banco aceitar conexão.
+        options: >-
+          --health-cmd "pg_isready -U reserva -d reserva"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://reserva:reserva-ci@localhost:5432/reserva?schema=public
+      DATABASE_URL_UNPOOLED: postgresql://reserva:reserva-ci@localhost:5432/reserva?schema=public
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            apps/api/package-lock.json
+            apps/web/package-lock.json
+
+      # O npm 10 que acompanha o Node 22 quebra nas peer dependencies (docs/architecture.md).
+      - name: npm 11
+        run: npm install -g npm@11
+
+      - name: Instalar (api)
+        run: npm ci
+        working-directory: apps/api
+      - name: Instalar (web)
+        run: npm ci
+        working-directory: apps/web
+
+      - name: Prisma — gerar client e aplicar migrations
+        working-directory: apps/api
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+
+      - name: Build (api)
+        run: npm run build
+        working-directory: apps/api
+      - name: Build (web)
+        run: npm run build
+        working-directory: apps/web
+
+      - name: Testes unitários (api)
+        run: npm test
+        working-directory: apps/api
+      - name: Testes E2E (api)
+        run: npm run test:e2e
+        working-directory: apps/api
+      - name: Testes unitários (web)
+        run: npm run test:unit -- --run
+        working-directory: apps/web
+
+      - name: Navegadores do Playwright
+        run: npx playwright install --with-deps
+        working-directory: apps/web
+      - name: Testes E2E (web)
+        run: npm run test:e2e
+        working-directory: apps/web
+
+      - name: Lint (api)
+        run: npm run lint
+        working-directory: apps/api
+      - name: Lint (web)
+        run: npm run lint
+        working-directory: apps/web
+      # O lint do web roda com --fix: aqui o CI reprova se o --fix precisou mudar algo.
+      - name: Lint não deixou correção pendente
+        run: git diff --exit-code
