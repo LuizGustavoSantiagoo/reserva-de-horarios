@@ -1,6 +1,6 @@
 ---
 issue: 7
-status: rascunho   # rascunho | aprovada
+status: aprovada   # rascunho | aprovada
 ---
 
 # US06 — Entrar no painel como administrador ou operador
