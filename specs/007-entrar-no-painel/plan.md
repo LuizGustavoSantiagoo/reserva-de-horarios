@@ -239,7 +239,7 @@ linha no Histórico e versão nova a cada um):
     (`argon2`), `.github/workflows/ci.yml` (passo do `JWT_SECRET`), `docs/architecture.md`
     (§2.1 item 11, §5.1, Histórico)
 
-- [ ] **Tarefa 2 — Entrar com e-mail e senha**
+- [x] **Tarefa 2 — Entrar com e-mail e senha**
   - Cobre: CA2, CA3
   - Teste primeiro: e2e `auth.e2e-spec.ts` (uma app por teste): `ADMIN` e `OPERATOR`
     entram e recebem `200 { data: { accessToken } }`; o token verifica com o
