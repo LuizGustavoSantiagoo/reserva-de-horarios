@@ -1,28 +1,30 @@
 <script setup lang="ts">
+import { useId } from 'vue'
 import type { Court } from '../services/grade.service'
 
 defineProps<{ courts: Court[]; selectedId: string | undefined }>()
 
 const emit = defineEmits<{ select: [courtId: string] }>()
+
+const selectId = useId()
+
+function onChange(event: Event): void {
+  emit('select', (event.target as HTMLSelectElement).value)
+}
 </script>
 
 <template>
-  <nav aria-label="Quadras" class="flex flex-wrap gap-sm">
-    <button
-      v-for="court in courts"
-      :key="court.id"
-      type="button"
-      data-test="court"
-      :aria-pressed="court.id === selectedId"
-      class="rounded-lg px-lg py-sm font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primaria-escura"
-      :class="
-        court.id === selectedId
-          ? 'bg-primaria text-texto'
-          : 'bg-superficie text-texto-suave ring-1 ring-desabilitado'
-      "
-      @click="emit('select', court.id)"
+  <div class="flex flex-col gap-sm">
+    <label :for="selectId" class="text-corpo">Quadra</label>
+    <select
+      :id="selectId"
+      :value="selectedId"
+      class="h-11 w-full rounded-lg border border-desabilitado bg-superficie px-md text-corpo text-texto focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primaria-escura"
+      @change="onChange"
     >
-      {{ court.name }}
-    </button>
-  </nav>
+      <option v-for="court in courts" :key="court.id" :value="court.id">
+        {{ court.name }}
+      </option>
+    </select>
+  </div>
 </template>

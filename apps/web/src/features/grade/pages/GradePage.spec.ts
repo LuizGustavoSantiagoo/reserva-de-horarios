@@ -61,9 +61,12 @@ describe('GradePage', () => {
     const wrapper = mount(GradePage)
     await flushPromises()
 
-    const buttons = wrapper.findAll('[data-test="court"]')
-    expect(buttons.map((button) => button.text())).toEqual(['Quadra 1', 'Quadra 2'])
-    expect(buttons.map((button) => button.attributes('aria-pressed'))).toEqual(['true', 'false'])
+    const select = wrapper.get('select')
+    expect(select.findAll('option').map((option) => option.text())).toEqual([
+      'Quadra 1',
+      'Quadra 2',
+    ])
+    expect((select.element as HTMLSelectElement).value).toBe('q1')
   })
 
   it('pede a grade da primeira quadra sem dia e abre no dia que a API devolveu', async () => {
@@ -71,7 +74,21 @@ describe('GradePage', () => {
     await flushPromises()
 
     expect(getSlotsMock).toHaveBeenCalledWith('q1', undefined)
-    expect(wrapper.text()).toContain('domingo, 22/11')
+    expect(wrapper.get('[data-test="grid-heading"]').text()).toContain('domingo, 22 de novembro')
+  })
+
+  it('mostra, acima dos horários, o nome da quadra escolhida e o dia por extenso', async () => {
+    const wrapper = mount(GradePage)
+    await flushPromises()
+
+    const heading = wrapper.get('[data-test="grid-heading"]')
+    expect(heading.text()).toContain('Quadra 1')
+    expect(heading.text()).toContain('domingo, 22 de novembro')
+
+    await wrapper.get('select').setValue('q2')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="grid-heading"]').text()).toContain('Quadra 2')
   })
 
   it('mostra os horários em ordem com as situações "livre" e "bloqueado"', async () => {
@@ -90,12 +107,11 @@ describe('GradePage', () => {
     const wrapper = mount(GradePage)
     await flushPromises()
 
-    await wrapper.findAll('[data-test="court"]')[1]?.trigger('click')
+    await wrapper.get('select').setValue('q2')
     await flushPromises()
 
     expect(getSlotsMock).toHaveBeenLastCalledWith('q2', '2026-11-22')
-    const buttons = wrapper.findAll('[data-test="court"]')
-    expect(buttons.map((button) => button.attributes('aria-pressed'))).toEqual(['false', 'true'])
+    expect((wrapper.get('select').element as HTMLSelectElement).value).toBe('q2')
   })
 
   it('trocar de dia pede a grade daquele dia na quadra escolhida', async () => {
@@ -106,6 +122,8 @@ describe('GradePage', () => {
     await flushPromises()
 
     expect(getSlotsMock).toHaveBeenLastCalledWith('q1', '2026-11-23')
-    expect(wrapper.text()).toContain('segunda-feira, 23/11')
+    expect(wrapper.get('[data-test="grid-heading"]').text()).toContain(
+      'segunda-feira, 23 de novembro',
+    )
   })
 })

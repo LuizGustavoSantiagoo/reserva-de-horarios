@@ -10,7 +10,7 @@ const LABELS: Record<SlotStatus, string> = {
 }
 
 const STYLES: Record<SlotStatus, string> = {
-  FREE: 'border-sucesso',
+  FREE: 'border-desabilitado bg-superficie text-texto',
   BLOCKED: 'border-desabilitado bg-desabilitado text-texto-suave',
 }
 
@@ -21,19 +21,28 @@ const hourFormat = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Sao_Paulo',
 })
 
-const range = computed(
-  () =>
-    `${hourFormat.format(new Date(props.item.startsAt))} – ${hourFormat.format(new Date(props.item.endsAt))}`,
-)
+const startsAt = computed(() => hourFormat.format(new Date(props.item.startsAt)))
+const endsAt = computed(() => hourFormat.format(new Date(props.item.endsAt)))
 </script>
 
 <template>
   <li
     data-test="slot"
-    class="flex items-center justify-between rounded-lg border-l-4 p-md shadow-sm"
+    class="flex flex-col gap-xs rounded-lg border p-md"
     :class="STYLES[item.status]"
   >
-    <span class="text-titulo-card">{{ range }}</span>
-    <span class="text-legenda">{{ LABELS[item.status] }}</span>
+    <p>
+      <span class="text-titulo-card">{{ startsAt }}</span>
+      <span class="text-legenda text-texto-suave"> às {{ endsAt }}</span>
+    </p>
+    <p class="flex items-center gap-xs text-legenda">
+      <!-- O selo verde é só preenchimento: a situação é dita pelo texto ao lado. -->
+      <span
+        v-if="item.status === 'FREE'"
+        aria-hidden="true"
+        class="size-2 shrink-0 rounded-full bg-sucesso"
+      />
+      {{ LABELS[item.status] }}
+    </p>
   </li>
 </template>

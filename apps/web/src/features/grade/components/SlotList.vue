@@ -6,7 +6,8 @@ defineProps<{ slots: Slot[] }>()
 </script>
 
 <template>
-  <ul class="flex flex-col gap-lg">
+  <!-- Mobile first: 2 colunas no celular, 3 a partir de `sm`, 5 em tela larga. -->
+  <ul class="grid grid-cols-2 gap-lg sm:grid-cols-3 lg:grid-cols-5">
     <SlotItem v-for="slot in slots" :key="slot.startsAt" :item="slot" />
   </ul>
 </template>
