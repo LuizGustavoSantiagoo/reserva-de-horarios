@@ -141,5 +141,10 @@ sobrescrito no `TestingModule`.
   - Teste primeiro: componente: falha na primeira carga mostra o erro e "Tentar de novo", e o botão recarrega; falha no polling mantém a última grade e a seleção, e mostra "não foi possível atualizar"; o aviso some na próxima atualização bem-sucedida. Falha porque a página não distingue as duas falhas.
   - Arquivos previstos: `apps/web/src/features/grade/pages/GradePage.vue` e spec
 
+- [ ] **Tarefa 11 — Fechar a história: pendências do auditor final**
+  - Cobre: CA11 (recusa da quadra também quando ela some com a grade aberta) e as pendências da auditoria final (documentação e dívida marcada com `TODO #2`)
+  - Teste primeiro: componente: com a grade aberta, uma atualização automática que recebe a recusa da quadra (quadra desativada ou inexistente) mostra a mensagem da recusa com "Voltar para hoje", em vez do aviso "não foi possível atualizar"; e2e do web (`apps/web/e2e/vue.spec.ts`) deixa de ser provisório: confere que a página da grade monta em `/` (título "Escolha seus horários"), sem o `TODO #2`. Falham porque o polling trata a recusa da quadra como falha comum e o e2e ainda é o provisório.
+  - Arquivos previstos: `apps/web/src/features/grade/pages/GradePage.vue` e spec, `apps/web/e2e/vue.spec.ts`, `docs/architecture.md` (§2.1 item 2: param de recurso cuja existência não pode ser revelada é validado no service e responde 404; §6: linha da US01 no mapa de domínios; Histórico)
+
 ## Critérios sem tarefa
 
