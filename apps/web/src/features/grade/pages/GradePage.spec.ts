@@ -511,6 +511,31 @@ describe('GradePage', () => {
       expect(wrapper.text()).not.toContain('já passou')
     })
 
+    it('a quadra em tela some (desativada ou apagada): mostra a recusa com "Voltar para hoje", e não o aviso', async () => {
+      const { wrapper, router } = await mountAt({ quadra: 'q2', dia: '2026-11-25' })
+      await flushPromises()
+
+      // Com a grade aberta, a quadra 2 foi desativada: a API passa a recusá-la com 404.
+      getSlotsMock.mockImplementation(async (courtId, date) => {
+        if (courtId === 'q2') throw new GradeRefusal('court', 'Quadra não encontrada')
+        return grid(courtId, date ?? '2026-11-22')
+      })
+      vi.advanceTimersByTime(POLL_MS)
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('Quadra não encontrada')
+      expect(wrapper.find('[data-test="refresh-warning"]').exists()).toBe(false)
+      expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(0)
+
+      await wrapper.get('button[data-test="back-to-today"]').trigger('click')
+      await flushPromises()
+
+      expect(getSlotsMock).toHaveBeenLastCalledWith('q1', undefined)
+      expect(router.currentRoute.value.query).toEqual({ quadra: 'q1', dia: '2026-11-22' })
+      expect(wrapper.text()).not.toContain('Quadra não encontrada')
+      expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(2)
+    })
+
     it('desmontar a página limpa o intervalo', async () => {
       const { wrapper } = await mountAt()
       await flushPromises()

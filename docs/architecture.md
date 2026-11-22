@@ -1,7 +1,7 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.5.0
+**Versão:** 1.6.0
 **Última atualização:** 2026-11-22
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
@@ -127,6 +127,10 @@ repassam o comando a cada app com `npm --prefix`.
    interceptor (`APP_INTERCEPTOR`) e o filtro (`APP_FILTER`) do item 5 moram no
    `AppModule`, e não no `main.ts`, porque os testes de ponta a ponta montam o
    `AppModule` sem passar pelo `main.ts` — registrados lá, ficariam fora dos testes.
+   **Exceção:** o param de um recurso cuja existência não pode ser revelada (ex.: a
+   quadra da grade pública, inexistente ou inativa) é validado no **service** e
+   responde **404** — inclusive quando nem tem o formato de id —, e não 400 pelo DTO;
+   assim a resposta é idêntica em todos os casos.
 3. **Persistência (ID8).** Prisma 7 com o schema em `apps/api/prisma/schema.prisma`
    e migrations versionadas em `apps/api/prisma/migrations/` (`prisma migrate dev`
    local; `prisma migrate deploy` em CI e produção). A arena única (RN21) e o
@@ -492,7 +496,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 
 | Domínio | Módulo (pasta) | Guard | Dados (repository) | US |
 | :------ | :------------- | :---- | :----------------- | :-- |
-| | | | | |
+| Grade pública | `apps/api/src/slots/` (lê courts, schedules, blocks e purchases pelos services exportados) + `apps/web/src/features/grade/` | sem guard (rota pública) | `PrismaService` nos services | US01 |
 
 ---
 
@@ -507,6 +511,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | 2026-11-13 | 1.4.0 | Tarefa 2 da US01 (#2): `VITE_API_URL` registrada como a variável do frontend, sem endereço padrão no código (§2.1, item 11) |
 | 2026-11-15 | 1.2.1 | Padrões de API (manutenção): `ValidationPipe`, interceptor e filtro registrados no `AppModule` (`APP_PIPE`, `APP_INTERCEPTOR`, `APP_FILTER`); `main.ts` fica com os cabeçalhos de segurança (`app.useSecurityHeaders()`) e o Swagger |
 | 2026-11-22 | 1.5.0 | Merge da `main` na branch da US01 (#2): reúne a 1.2.1 (padrões de API na `main`) com a 1.3.0 e a 1.4.0 (branch da US01) |
+| 2026-11-22 | 1.6.0 | Fechamento da US01 (#2): exceção do param validado no service com 404 (§2.1, item 2) e linha da grade pública no Mapa de Domínios (§6) |
 
 ---
 

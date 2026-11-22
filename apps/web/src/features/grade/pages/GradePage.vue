@@ -116,6 +116,13 @@ function showFailure(error: unknown): void {
   loadError.value = errorMessage(error)
 }
 
+// Link recusado (CA11): a grade sai da tela e fica a mensagem com "Voltar para hoje".
+function showRefusal(error: GradeRefusal): void {
+  grid.value = undefined
+  refreshFailed.value = false
+  refusal.value = error
+}
+
 // Sem dia escolhido, a grade é pedida sem `date`: o "hoje" é sempre o do servidor.
 // Nunca rejeita: a recusa do link e a falha de rede viram estado da tela.
 async function loadGrid(day?: string): Promise<void> {
@@ -129,8 +136,7 @@ async function loadGrid(day?: string): Promise<void> {
     await writeQuery(loaded.courtId, loaded.date)
   } catch (error) {
     if (error instanceof GradeRefusal) {
-      grid.value = undefined
-      refusal.value = error
+      showRefusal(error)
       return
     }
     showFailure(error)
@@ -191,6 +197,11 @@ async function refreshGrid(): Promise<void> {
     // Virada da meia-noite: o dia em tela passou e a API recusa; a grade de hoje é a do servidor.
     if (error instanceof GradeRefusal && error.reason === 'day') {
       await loadGrid()
+      return
+    }
+    // A quadra em tela foi desativada ou apagada: é a recusa do CA11, não uma falha de rede.
+    if (error instanceof GradeRefusal) {
+      showRefusal(error)
       return
     }
     refreshFailed.value = true
