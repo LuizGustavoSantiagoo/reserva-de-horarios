@@ -351,7 +351,7 @@ linha no Histórico e versão nova a cada um):
     `apps/web/src/router/index.ts`, `apps/web/src/main.ts`,
     `apps/web/src/features/admin/session-expired.ts` e spec (o callback)
 
-- [ ] **Tarefa 9 — Mostrar o painel a quem entrou**
+- [x] **Tarefa 9 — Mostrar o painel a quem entrou**
   - Cobre: CA15, CA16 (sem token → login; a grade continua aberta)
   - Teste primeiro: componente `AdminLayout`: mostra o e-mail e "Administrador" ou
     "Operador" vindos do `getMe`; **Cadastrar operador** só para `ADMIN`; **Sair** chama
