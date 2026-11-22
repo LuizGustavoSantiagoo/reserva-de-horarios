@@ -336,7 +336,7 @@ linha no Histórico e versão nova a cada um):
     `apps/web/src/api/client.ts` e `client.spec.ts`, `docs/architecture.md` (§4,
     Histórico)
 
-- [ ] **Tarefa 8 — Entrar pela tela de login**
+- [x] **Tarefa 8 — Entrar pela tela de login**
   - Cobre: CA13, CA14 (o redirecionamento com o aviso)
   - Teste primeiro: componente `LoginPage`: credenciais certas → `setToken` e
     `router.push` para `admin`; `401`, `400` e `429` → mensagem da API na tela, sem token
