@@ -379,6 +379,24 @@ linha no Histórico e versão nova a cada um):
     (`createOperator`), `apps/web/src/router/index.ts`, `apps/web/src/router/guards.ts`
     e spec
 
+- [ ] **Tarefa 11 — Fechar a história: pendências do auditor final**
+  - Cobre: CA15 (o aviso de erro do painel não fica preso quando o perfil chega por
+    outro caminho), CA13 (cada campo da tela de login ligado à mensagem de erro pelo
+    próprio id) e as pendências de documentação da auditoria final
+  - Teste primeiro: componente `AdminLayout`: com o aviso de falha na tela, se o perfil
+    passa a existir na sessão (gravado pelo guard), **Tentar de novo** apaga o aviso e
+    mostra o painel. Componente `LoginPage`: o `aria-describedby` do campo de senha
+    aponta para o id da mensagem de erro, que não é derivado do id do e-mail. Falham
+    porque o retorno antecipado do layout vem antes de limpar o erro e a senha reusa
+    `${emailId}-erro`.
+  - Arquivos previstos: `apps/web/src/features/admin/pages/AdminLayout.vue` e spec,
+    `apps/web/src/features/admin/pages/LoginPage.vue` e spec, `docs/prd.md` (US06 em
+    `🟢 Live` e Histórico), `specs/README.md` (007 `implementada`),
+    `docs/architecture.md` (§3: indentação da linha `users/` e
+    `features/admin/session-expired.ts` como exceção; §4: o `useSession` guarda também o
+    perfil só em memória e o guard barra por papel via `meta.roles`; §6: linha do
+    domínio de autenticação e usuários; Histórico 1.10.0)
+
 ## Critérios sem tarefa
 
 -
