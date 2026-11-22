@@ -278,7 +278,7 @@ linha no Histórico e versão nova a cada um):
     `apps/api/test/cors.e2e-spec.ts`, `apps/api/test/swagger.e2e-spec.ts`,
     `docs/architecture.md` (§2.2, §3, Histórico)
 
-- [ ] **Tarefa 4 — Cadastrar operador**
+- [x] **Tarefa 4 — Cadastrar operador**
   - Cobre: CA7, CA8, CA10 (em `POST /users`; `GET /users` entra na Tarefa 5)
   - Teste primeiro: unitário do `RolesGuard` (sem `@Roles` passa; papel fora da lista →
     `403` com a mensagem do CA10). E2e: `ADMIN` cadastra → `201` com `role: 'OPERATOR'`,

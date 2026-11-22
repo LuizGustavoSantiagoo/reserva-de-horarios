@@ -1,7 +1,7 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.7.0
+**Versão:** 1.8.0
 **Última atualização:** 2026-11-22
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
@@ -153,7 +153,12 @@ repassam o comando a cada app com `npm --prefix`.
    - `AuthGuard` **global** valida o `Authorization: Bearer <token>`; toda rota é
      protegida por padrão, e as públicas (grade, reserva, cancelamento por código,
      webhook, login) são marcadas explicitamente com `@Public()`.
-   - `RolesGuard` com `@Roles('ADMIN')` nas rotas administrativas.
+   - `RolesGuard` **global**, registrado como segundo `APP_GUARD` (depois do
+     `AuthGuard`, de quem lê o `request.user`), com `@Roles(...)` recebendo a lista de
+     papéis que alcançam a rota (ex.: `@Roles('ADMIN')` nas rotas administrativas).
+     Rota sem `@Roles` passa para qualquer usuário autenticado; papel fora da lista
+     recebe 403 "Seu perfil não tem acesso a esta operação.", antes da validação do
+     corpo.
    - Senha guardada só como hash `argon2`; login com credencial errada responde erro
      genérico, sem dizer se o usuário existe.
    - Rota pública **nunca** devolve telefone nem dado de pagamento (RN06): os DTOs de
@@ -520,6 +525,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | 2026-11-22 | 1.5.0 | Merge da `main` na branch da US01 (#2): reúne a 1.2.1 (padrões de API na `main`) com a 1.3.0 e a 1.4.0 (branch da US01) |
 | 2026-11-22 | 1.6.0 | Tarefa 1 da US06 (#7): `AdminUser.role` passa a `ADMIN` \| `OPERATOR` (§5.1); `ADMIN_EMAIL` e `ADMIN_PASSWORD` lidas só pelo seed via `prisma.config.ts`, padrão de `JWT_EXPIRES_IN` (28800 s) e `JWT_SECRET` do CI gerado a cada execução (§2.1, item 11) |
 | 2026-11-22 | 1.7.0 | Tarefa 3 da US06 (#7): `@ApiBearerAuth()` nos controllers protegidos, e não só nos administrativos, e Swagger montado por `setupSwagger` em `src/common/swagger.ts` (§2.2); pasta `users/` na API, `APP_GUARD` no `app.module.ts`, `common/auth/` e o comentário do `main.ts` na árvore (§3) |
+| 2026-11-22 | 1.8.0 | Tarefa 4 da US06 (#7): `RolesGuard` global (segundo `APP_GUARD`) com `@Roles(...)` recebendo a lista de papéis, e não só `'ADMIN'`; 403 antes da validação do corpo (§2.1, item 6) |
 
 ---
 

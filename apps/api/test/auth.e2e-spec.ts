@@ -9,6 +9,7 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
 import { createUser } from './helpers/auth.js';
 import type { TestUser } from './helpers/auth.js';
 import { resetDatabase } from './helpers/db.js';
+import { withoutTimestamp } from './helpers/error-body.js';
 
 const PASSWORD = 'senha-certa-123';
 const INVALID_CREDENTIALS = 'E-mail ou senha inválidos.';
@@ -43,12 +44,6 @@ function verifyHs256(token: string, secret: string): TokenPayload {
   ).toBe(true);
 
   return decodeSegment(payload) as TokenPayload;
-}
-
-function withoutTimestamp(body: Record<string, unknown>) {
-  const { timestamp, ...rest } = body;
-  expect(typeof timestamp).toBe('string');
-  return rest;
 }
 
 // Uma app por teste: o contador de tentativas de login (Tarefa 6) vive na app,

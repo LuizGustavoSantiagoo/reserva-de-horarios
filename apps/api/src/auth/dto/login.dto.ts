@@ -1,12 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
-
-// Mesma normalização do e-mail que o seed aplica em prisma/admin-seed.ts (o seed
-// não importa nada de src/): sem espaços nas pontas e em minúsculas.
-function normalizeEmail({ value }: { value: unknown }): unknown {
-  return typeof value === 'string' ? value.trim().toLowerCase() : value;
-}
+import { normalizeEmail } from '../../common/normalize-email.js';
 
 export class LoginDto {
   @ApiProperty({

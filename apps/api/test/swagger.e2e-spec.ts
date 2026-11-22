@@ -7,6 +7,7 @@ import { setupSwagger } from '../src/common/swagger.js';
 
 interface Operation {
   security?: Record<string, string[]>[];
+  responses?: Record<string, unknown>;
 }
 
 interface OpenApiDocument {
@@ -51,6 +52,15 @@ describe('/docs-json (e2e)', () => {
     expect(document.paths['/users/me']?.get?.security).toEqual([
       { bearer: [] },
     ]);
+  });
+
+  it('POST /users exige o Bearer e documenta 201, 400, 401, 403 e 409', () => {
+    const operation = document.paths['/users']?.post;
+
+    expect(operation?.security).toEqual([{ bearer: [] }]);
+    expect(Object.keys(operation?.responses ?? {})).toEqual(
+      expect.arrayContaining(['201', '400', '401', '403', '409']),
+    );
   });
 
   it.each([

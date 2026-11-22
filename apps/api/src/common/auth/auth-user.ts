@@ -12,3 +12,6 @@ export type AuthenticatedRequest = Request & { user?: AuthUser };
 
 /** A mesma recusa para todo token ausente ou inválido (CA5). */
 export const AUTHENTICATION_REQUIRED = 'Autenticação necessária.';
+
+/** A recusa de quem está autenticado, mas tem um papel sem acesso à rota (CA10). */
+export const ACCESS_DENIED = 'Seu perfil não tem acesso a esta operação.';
