@@ -277,4 +277,104 @@ describe('GradePage', () => {
 
     expect(getSlotsMock).toHaveBeenCalledTimes(1)
   })
+
+  describe('seleção de horários', () => {
+    function counter(wrapper: Awaited<ReturnType<typeof mountAt>>['wrapper']) {
+      return wrapper.get('[data-test="selection-count"]').text()
+    }
+
+    it('tocar num livre marca e o contador mostra "1 horário selecionado"; tocar de novo desmarca', async () => {
+      const { wrapper } = await mountAt()
+      await flushPromises()
+
+      expect(counter(wrapper)).toBe('0 horários selecionados')
+      const free = wrapper.get('[data-test="slot-toggle"]')
+      expect(free.attributes('aria-pressed')).toBe('false')
+
+      await free.trigger('click')
+      expect(wrapper.get('[data-test="slot-toggle"]').attributes('aria-pressed')).toBe('true')
+      expect(counter(wrapper)).toBe('1 horário selecionado')
+
+      await wrapper.get('[data-test="slot-toggle"]').trigger('click')
+      expect(wrapper.get('[data-test="slot-toggle"]').attributes('aria-pressed')).toBe('false')
+      expect(counter(wrapper)).toBe('0 horários selecionados')
+    })
+
+    it('trocar de quadra e de dia mantém a seleção e soma no plural', async () => {
+      const { wrapper } = await mountAt()
+      await flushPromises()
+
+      await wrapper.get('[data-test="slot-toggle"]').trigger('click')
+
+      await wrapper.get('select').setValue('q2')
+      await flushPromises()
+      expect(counter(wrapper)).toBe('1 horário selecionado')
+      // O mesmo horário na outra quadra é outro horário: não vem marcado.
+      expect(wrapper.get('[data-test="slot-toggle"]').attributes('aria-pressed')).toBe('false')
+      await wrapper.get('[data-test="slot-toggle"]').trigger('click')
+      expect(counter(wrapper)).toBe('2 horários selecionados')
+
+      await wrapper.get('button[aria-label="Próximo dia"]').trigger('click')
+      await flushPromises()
+      expect(counter(wrapper)).toBe('2 horários selecionados')
+      expect(wrapper.get('[data-test="slot-toggle"]').attributes('aria-pressed')).toBe('false')
+
+      await wrapper.get('select').setValue('q1')
+      await flushPromises()
+      await wrapper.get('button[aria-label="Dia anterior"]').trigger('click')
+      await flushPromises()
+      expect(getSlotsMock).toHaveBeenLastCalledWith('q1', '2026-11-22')
+      expect(wrapper.get('[data-test="slot-toggle"]').attributes('aria-pressed')).toBe('true')
+      expect(counter(wrapper)).toBe('2 horários selecionados')
+    })
+
+    it('tocar em em reserva, reservado, bloqueado ou indisponível não muda nada', async () => {
+      getSlotsMock.mockImplementation(async (courtId, date) => {
+        const day = date ?? '2026-11-22'
+        return {
+          ...grid(courtId, day),
+          slots: (['HELD', 'RESERVED', 'BLOCKED', 'UNAVAILABLE'] as const).map((status, i) => ({
+            startsAt: `${day}T1${i}:00:00.000Z`,
+            endsAt: `${day}T1${i + 1}:00:00.000Z`,
+            status,
+            ...(status === 'RESERVED' ? { firstName: 'Maria' } : {}),
+          })),
+        }
+      })
+
+      const { wrapper } = await mountAt()
+      await flushPromises()
+
+      const slots = wrapper.findAll('[data-test="slot"]')
+      expect(slots).toHaveLength(4)
+      for (const slot of slots) {
+        await slot.trigger('click')
+        await slot.findAll('*').at(-1)?.trigger('click')
+      }
+
+      expect(wrapper.find('[data-test="slot-toggle"]').exists()).toBe(false)
+      expect(counter(wrapper)).toBe('0 horários selecionados')
+    })
+
+    it('não existe botão para avançar para a reserva', async () => {
+      const { wrapper } = await mountAt()
+      await flushPromises()
+
+      await wrapper.get('[data-test="slot-toggle"]').trigger('click')
+
+      // Só existem as setas e os botões de dia (DayPicker) e o próprio horário livre.
+      const others = wrapper.findAll('button').filter((button) => {
+        const label = button.attributes('aria-label') ?? ''
+        const test = button.attributes('data-test')
+        return (
+          test !== 'day' &&
+          test !== 'slot-toggle' &&
+          label !== 'Dia anterior' &&
+          label !== 'Próximo dia'
+        )
+      })
+      expect(others).toHaveLength(0)
+      expect(wrapper.text()).not.toMatch(/reservar|avançar|continuar/i)
+    })
+  })
 })

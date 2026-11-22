@@ -15,6 +15,9 @@ const courtId = ref<string>()
 const grid = ref<SlotGrid>()
 // Link recusado pela API (CA11): quadra não encontrada ou dia inválido ou passado.
 const refusal = ref<GradeRefusal>()
+// Horários marcados (CA8), com chave `courtId|startsAt`: valem para qualquer quadra e dia,
+// por isso a seleção sobrevive à troca de quadra ou de dia.
+const selection = ref(new Set<string>())
 
 // A quadra e o dia moram na query (`?quadra=<id>&dia=YYYY-MM-DD`): o link abre a mesma grade,
 // e trocar de quadra ou de dia só troca a query, sem montar a página de novo.
@@ -48,6 +51,37 @@ const courtName = computed(
 const dayLabel = computed(() =>
   grid.value ? dayFormat.format(new Date(`${grid.value.date}T00:00:00.000Z`)) : '',
 )
+
+function selectionKey(gridCourtId: string, startsAt: string): string {
+  return `${gridCourtId}|${startsAt}`
+}
+
+// Os horários marcados da grade em exibição, pelo `startsAt`, para a lista.
+const selectedInGrid = computed(() => {
+  const shown = grid.value
+  if (!shown) return new Set<string>()
+  return new Set(
+    shown.slots
+      .map((slot) => slot.startsAt)
+      .filter((startsAt) => selection.value.has(selectionKey(shown.courtId, startsAt))),
+  )
+})
+
+const selectionCount = computed(() =>
+  selection.value.size === 1
+    ? '1 horário selecionado'
+    : `${selection.value.size} horários selecionados`,
+)
+
+// Só o horário livre entra na seleção; tocar de novo tira.
+function toggleSlot(startsAt: string): void {
+  const shown = grid.value
+  const slot = shown?.slots.find((candidate) => candidate.startsAt === startsAt)
+  if (!shown || slot?.status !== 'FREE') return
+  const key = selectionKey(shown.courtId, startsAt)
+  if (selection.value.has(key)) selection.value.delete(key)
+  else selection.value.add(key)
+}
 
 // Sem dia escolhido, a grade é pedida sem `date`: o "hoje" é sempre o do servidor.
 async function loadGrid(day?: string): Promise<void> {
@@ -138,11 +172,19 @@ onMounted(async () => {
         />
       </div>
       <hr class="border-desabilitado" />
-      <div data-test="grid-heading" class="flex flex-col gap-xs">
-        <h2 class="text-titulo-card">{{ courtName }}</h2>
-        <p class="text-corpo text-texto-suave first-letter:uppercase">{{ dayLabel }}</p>
+      <div class="flex flex-col gap-sm sm:flex-row sm:items-end sm:justify-between">
+        <div data-test="grid-heading" class="flex flex-col gap-xs">
+          <h2 class="text-titulo-card">{{ courtName }}</h2>
+          <p class="text-corpo text-texto-suave first-letter:uppercase">{{ dayLabel }}</p>
+        </div>
+        <div class="flex flex-col gap-xs sm:items-end">
+          <p data-test="selection-count" aria-live="polite" class="text-corpo font-semibold">
+            {{ selectionCount }}
+          </p>
+          <p class="text-legenda text-texto-suave">Claro: livre · Escuro: selecionado</p>
+        </div>
       </div>
-      <SlotList :slots="grid.slots" />
+      <SlotList :slots="grid.slots" :selected="selectedInGrid" @toggle="toggleSlot" />
     </section>
   </div>
 </template>

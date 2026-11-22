@@ -126,7 +126,7 @@ sobrescrito no `TestingModule`.
   - Teste primeiro: e2e: `courtId` inexistente, inativo e não-UUID respondem o **mesmo** `404`; data mal formada, impossível ou passada responde `400` com `fields.date`; componente: a mensagem da API aparece com o botão "voltar para hoje", que pede a grade sem `date`; o `DayPicker` não navega para antes do `today` devolvido pela API, mesmo com o relógio do aparelho num dia diferente. Falham porque a rota ainda não valida e a página não trata o erro.
   - Arquivos previstos: `apps/api/src/slots/` (controller, service, `dto/`), `apps/api/src/common/` (filtro), `apps/api/test/slots.e2e-spec.ts`, `apps/web/src/features/grade/pages/GradePage.vue`, `apps/web/src/features/grade/components/DayPicker.vue` e specs
 
-- [ ] **Tarefa 8 — Selecionar horários livres**
+- [x] **Tarefa 8 — Selecionar horários livres**
   - Cobre: CA8
   - Teste primeiro: componente: tocar num livre marca e o contador mostra "1 horário selecionado"; tocar de novo desmarca; trocar de quadra e de dia mantém a seleção; tocar em em reserva, reservado, bloqueado ou indisponível não muda nada; não existe botão de avançar. Falha porque a seleção não existe.
   - Arquivos previstos: `apps/web/src/features/grade/pages/GradePage.vue`, `apps/web/src/features/grade/components/SlotItem.vue`, `apps/web/src/features/grade/components/SlotList.vue` e specs

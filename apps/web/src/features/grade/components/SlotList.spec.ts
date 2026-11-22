@@ -26,4 +26,28 @@ describe('SlotList', () => {
     expect(wrapper.text()).toContain('Não há horários neste dia')
     expect(wrapper.find('ul').exists()).toBe(false)
   })
+
+  it('marca os horários selecionados e repassa o toque com o início do horário', async () => {
+    const slots = [
+      {
+        startsAt: '2026-11-22T11:00:00.000Z',
+        endsAt: '2026-11-22T12:00:00.000Z',
+        status: 'FREE' as const,
+      },
+      {
+        startsAt: '2026-11-22T12:00:00.000Z',
+        endsAt: '2026-11-22T13:00:00.000Z',
+        status: 'FREE' as const,
+      },
+    ]
+    const wrapper = mount(SlotList, {
+      props: { slots, selected: new Set(['2026-11-22T12:00:00.000Z']) },
+    })
+
+    const buttons = wrapper.findAll('button')
+    expect(buttons.map((button) => button.attributes('aria-pressed'))).toEqual(['false', 'true'])
+
+    await buttons[0]?.trigger('click')
+    expect(wrapper.emitted('toggle')).toEqual([['2026-11-22T11:00:00.000Z']])
+  })
 })

@@ -81,4 +81,44 @@ describe('SlotItem', () => {
     expect(wrapper.get('[data-test="slot"]').classes()).toContain('bg-desabilitado')
     expect(wrapper.find('.bg-sucesso').exists()).toBe(false)
   })
+
+  describe('seleção', () => {
+    const FREE = {
+      startsAt: '2026-11-22T11:00:00.000Z',
+      endsAt: '2026-11-22T12:00:00.000Z',
+      status: 'FREE' as const,
+    }
+
+    it('o livre é um botão com aria-pressed e tocar nele avisa a página', async () => {
+      const wrapper = mount(SlotItem, { props: { item: FREE, selected: false } })
+
+      const button = wrapper.get('button')
+      expect(button.attributes('aria-pressed')).toBe('false')
+      await button.trigger('click')
+
+      expect(wrapper.emitted('toggle')).toHaveLength(1)
+    })
+
+    it('o livre selecionado fica marcado (aria-pressed e fundo escuro)', () => {
+      const wrapper = mount(SlotItem, { props: { item: FREE, selected: true } })
+
+      const button = wrapper.get('button')
+      expect(button.attributes('aria-pressed')).toBe('true')
+      expect(button.classes()).toContain('bg-texto')
+      expect(button.classes()).toContain('text-superficie')
+    })
+
+    it.each(['HELD', 'RESERVED', 'BLOCKED', 'UNAVAILABLE'] as const)(
+      '%s não é botão e não reage ao toque',
+      async (status) => {
+        const wrapper = mount(SlotItem, {
+          props: { item: { ...FREE, status, firstName: 'Maria' }, selected: false },
+        })
+
+        expect(wrapper.find('button').exists()).toBe(false)
+        await wrapper.get('[data-test="slot"]').trigger('click')
+        expect(wrapper.emitted('toggle')).toBeUndefined()
+      },
+    )
+  })
 })
