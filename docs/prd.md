@@ -1,8 +1,8 @@
 # 📄 Product Requirements Document (PRD)
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.4.0
-**Última atualização:** 2026-10-12
+**Versão:** 1.5.0
+**Última atualização:** 2026-11-22
 
 > 🤖 **Este documento é a fonte da verdade sobre o QUE o produto faz.** Regra de
 > negócio que não estiver aqui não existe — nem para a equipe, nem para a IA.
@@ -50,7 +50,8 @@ de ninguém.
 | **Pré-reserva** | O horário segurado enquanto alguém está na tela de reserva preenchendo os dados. Dura 3 minutos e cai sozinha se a pessoa desistir. | **Reserva pendente** — a pré-reserva ainda não tem nome, telefone nem Pix; é só o horário travado para quem chegou primeiro. |
 | **Reserva pendente** | Reserva criada e aguardando a confirmação do Pix. Segura o horário enquanto a cobrança estiver válida, mas não dá direito a nada. | **Reserva** (confirmada) — só o pagamento confirmado transforma uma na outra. |
 | **Cliente** | Quem quer jogar e reserva o horário. Não tem conta: identifica-se com nome e telefone. Decide o que vai jogar na hora — o sistema não pergunta. | **Administrador** — o cliente compra; o administrador opera. |
-| **Administrador** | Quem opera o sistema: mantém os dados da arena, cadastra as quadras, define a agenda e vê as reservas. Entra com login e senha. | **Cliente** — ver acima. |
+| **Administrador** | Quem opera o sistema: mantém os dados da arena, cadastra as quadras, define a agenda e vê as reservas. Entra com login e senha. | **Cliente** — ver acima. **Operador** — ver abaixo. |
+| **Operador** | Funcionário da arena que atende no dia a dia. Entra no painel com login e senha, numa conta que só o administrador cria, e alcança só o que o papel dele permite. | **Administrador** — o operador trabalha no painel, mas não administra: não mexe na arena, nas quadras, na agenda nem nas contas. |
 | **Pagamento** | O Pix que confirma a reserva. Sem ele, a reserva não vale. | **Reserva** — a reserva é o direito; o pagamento é a prova de que o dinheiro entrou. |
 | **Pagamento fora do prazo** | Pix pago cujo aviso chega depois de a compra já ter expirado. Os horários ainda livres são confirmados na hora; os que já forem de outra pessoa ficam de fora, e o pagamento fica registrado para o administrador. | **Reserva pendente** — a pendente ainda está no prazo; esta perdeu o prazo, mas o dinheiro entrou. |
 | **Código de cancelamento** | O código imprevisível mostrado ao cliente quando o pagamento é confirmado. Sozinho, é o que permite cancelar os horários daquela compra. | **Senha** — não identifica ninguém e não dá acesso a painel: quem tem o código cancela, e só os horários daquela compra. |
@@ -65,11 +66,12 @@ de ninguém.
 | Ator | Quem é | Pode | Não pode |
 | :--- | :----- | :--- | :------- |
 | **Cliente** | Qualquer pessoa, **sem conta**. Identifica-se com nome e telefone na hora de reservar. | Ver a arena, as quadras e a grade de horários; reservar um ou mais horários livres numa compra; pagar por Pix; ver o próprio código de cancelamento; cancelar a própria reserva apresentando o código. | Editar a arena; cadastrar quadra ou agenda; bloquear horário; ver telefone ou dados de pagamento de outros clientes; cancelar ou alterar reserva de outra pessoa. |
-| **Administrador** | Quem opera o sistema. Entra com **login e senha**. | Editar os dados da arena; cadastrar, editar e inativar quadras; definir a agenda; ver todas as reservas com nome, telefone e situação do pagamento; bloquear e desbloquear horário; cancelar qualquer reserva. | Criar ou excluir a arena; alterar o valor de um pagamento já confirmado; apagar o histórico de pagamentos (é a prova de que o dinheiro entrou). |
+| **Administrador** | Quem opera o sistema. Entra com **login e senha**. | Editar os dados da arena; cadastrar, editar e inativar quadras; definir a agenda; ver todas as reservas com nome, telefone e situação do pagamento; bloquear e desbloquear horário; cancelar qualquer reserva; cadastrar contas de operador e ver todas as contas do painel. | Criar ou excluir a arena; alterar o valor de um pagamento já confirmado; apagar o histórico de pagamentos (é a prova de que o dinheiro entrou). |
+| **Operador** | Funcionário da arena. Entra com **login e senha**, numa conta criada pelo administrador. | Entrar no painel e ver o próprio perfil. O que mais ele faz no painel entra com a história que o incluir (a agenda do dia, US09). | Tudo o que é só do administrador: editar a arena; cadastrar quadra ou agenda; bloquear horário; cancelar reserva; cadastrar contas; ver a conta de outro usuário. |
 
 > 🔐 Como o cliente não tem conta, **toda a autenticação (JWT) e o controle por role
-> vivem do lado do administrador**: a grade e a reserva são públicas; tudo que
-> administra exige token válido.
+> vivem do lado do painel** — administrador e operador: a grade e a reserva são
+> públicas; tudo do painel exige token válido, e o papel decide o que cada um alcança.
 
 ---
 
@@ -168,18 +170,22 @@ que** o horário não fique preso por quem desistiu.
 
 ---
 
-### US06 — Entrar no painel como administrador · `Must Have` · `S` · Status: `🟡 Ready`
+### US06 — Entrar no painel como administrador ou operador · `Must Have` · `S` · Status: `🟡 Ready`
 
-**Como** administrador, **eu quero** entrar com login e senha **para que** só eu veja
-os dados dos clientes e opere a arena.
+**Como** administrador ou operador, **eu quero** entrar no painel com e-mail e senha
+**para que** só quem trabalha na arena chegue ao painel, e cada um alcance só o que o
+seu papel permite.
 
 **Critérios de aceite:**
 
 - [ ] **Dado** credenciais válidas, **quando** faço login, **então** recebo acesso ao painel.
 - [ ] **Dado** senha errada, **quando** tento entrar, **então** recebo um erro genérico, sem dizer se o usuário existe.
 - [ ] **Dado** uma rota administrativa, **quando** ela é acessada sem autenticação válida, **então** o acesso é negado.
+- [ ] **Dado** que sou administrador, **quando** cadastro um operador com e-mail e senha, **então** ele passa a poder entrar, e a senha nunca é devolvida nem guardada em claro.
+- [ ] **Dado** que sou operador, **quando** tento uma operação que é só do administrador, ou ver a conta de outro usuário, **então** sou recusado.
+- [ ] **Dado** que errei o login várias vezes seguidas, **quando** passo do limite de tentativas, **então** sou bloqueado temporariamente de tentar de novo.
 
-**Regras relacionadas:** RN13
+**Regras relacionadas:** RN13, RN24
 
 ---
 
@@ -291,6 +297,7 @@ imprevisto de quem pediu cancelamento por fora.
 | RN21 | O sistema atende **uma única arena**, que já existe desde a instalação. Pelo painel ela **não é criada nem excluída**: o administrador só edita nome e endereço. | US07 |
 | RN22 | Uma **compra** reúne um ou mais horários, de quaisquer quadras e dias, **sem limite de quantidade**, pagos com **um único Pix** pela soma dos preços e cancelados com **um único código**. Cada horário vira uma reserva própria. Horário que não puder ser reservado sai da compra: antes do Pix, o valor é recalculado; depois do Pix, vale a RN18. Cancelar parte da compra não devolve dinheiro (RN04). | US02, US03, US04, US05 |
 | RN23 | Todo horário dura **1 hora** e começa em **hora cheia**. | US08 |
+| RN24 | Tentativas de login são **limitadas por origem**: 5 tentativas a cada 10 minutos. Passou do limite, a origem é barrada temporariamente. É o que torna inviável descobrir a senha por tentativa e erro. | US06 |
 
 ---
 
@@ -300,7 +307,7 @@ imprevisto de quem pediu cancelamento por fora.
 - **Conta e login de cliente** — reserva se faz com nome, telefone e Pix. Não há histórico, perfil nem "minhas reservas".
 - **Reembolso e estorno** — cancelar libera o horário, não devolve dinheiro. O fluxo de estorno dobraria o trabalho de pagamento.
 - **Várias arenas** — o sistema atende uma única arena. Atender várias exigiria escolher a arena antes da grade e separar agenda e reservas por local.
-- **Dono de arena como usuário do sistema** — existe um único papel administrativo.
+- **Dono de arena como usuário do sistema** — existe um único papel administrativo; o operador trabalha no painel, mas não administra.
 - **Notificação por WhatsApp, e-mail ou SMS** — a confirmação e o código de cancelamento aparecem na tela, e é só lá que aparecem.
 - **Mensalista e reserva recorrente** — a compra reúne horários avulsos escolhidos na hora; nada se repete sozinho.
 - **Sinal ou pagamento parcial** — ou paga o valor cheio, ou não tem reserva.
@@ -344,3 +351,4 @@ imprevisto de quem pediu cancelamento por fora.
 | 2026-09-26 | 1.2.0 | US12 removida: pagamento fora do prazo passa a **confirmar a reserva** se o horário ainda estiver livre, sem estado *pagamento em revisão* nem decisão do administrador (RN18, RN01, US04, US09) |
 | 2026-09-26 | 1.3.0 | Revisão das Issues: **compra** de vários horários com um Pix e um código, cancelamento parcial (RN22, US02–US05); quadra pode ser **inativada** (US07, RN14); horário fixo de **1 hora** (RN23, US08); agenda do dia mostra só os reservados (US09); aviso de tempo esgotado na tela de pagamento (US04) |
 | 2026-10-12 | 1.4.0 | Revisão da Entrega 1: botão **Conferir pagamento** na tela de espera, que consulta o provedor quando o aviso demora — a confirmação passa a vir do aviso autenticado **ou** da consulta do sistema ao provedor (RN02, US03) |
+| 2026-11-22 | 1.5.0 | Spec da US06 (#7): novo ator **Operador** (funcionário da arena, conta criada pelo administrador, sem poder de administração) no glossário e nos atores; autenticação passa a ser do **painel**, não só do administrador; US06 cobre administrador e operador, com cadastro de operador, recusa por papel e limite de tentativas no login (RN24) |
