@@ -121,7 +121,7 @@ sobrescrito no `TestingModule`.
   - Teste primeiro: e2e de `GET /courts` → `[]` sem quadra ativa e de `GET /courts/:id/slots` → `slots: []` num dia sem agenda; componente mostrando "nenhuma quadra disponível" (sem seletor de dia) e a mensagem de dia sem horários. Falham porque a página não trata lista vazia.
   - Arquivos previstos: `apps/api/test/slots.e2e-spec.ts`, `apps/web/src/features/grade/pages/GradePage.vue`, `apps/web/src/features/grade/components/SlotList.vue` e specs
 
-- [ ] **Tarefa 7 — Recusar link de quadra ou dia inválido**
+- [x] **Tarefa 7 — Recusar link de quadra ou dia inválido**
   - Cobre: CA11
   - Teste primeiro: e2e: `courtId` inexistente, inativo e não-UUID respondem o **mesmo** `404`; data mal formada, impossível ou passada responde `400` com `fields.date`; componente: a mensagem da API aparece com o botão "voltar para hoje", que pede a grade sem `date`; o `DayPicker` não navega para antes do `today` devolvido pela API, mesmo com o relógio do aparelho num dia diferente. Falham porque a rota ainda não valida e a página não trata o erro.
   - Arquivos previstos: `apps/api/src/slots/` (controller, service, `dto/`), `apps/api/src/common/` (filtro), `apps/api/test/slots.e2e-spec.ts`, `apps/web/src/features/grade/pages/GradePage.vue`, `apps/web/src/features/grade/components/DayPicker.vue` e specs

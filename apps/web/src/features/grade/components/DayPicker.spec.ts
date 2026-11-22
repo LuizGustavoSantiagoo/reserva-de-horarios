@@ -8,7 +8,7 @@ describe('DayPicker', () => {
   })
 
   it('destaca o dia recebido na faixa, com o dia da semana, aria-pressed e aria-current', () => {
-    const wrapper = mount(DayPicker, { props: { day: '2026-11-22' } })
+    const wrapper = mount(DayPicker, { props: { day: '2026-11-22', today: '2026-11-22' } })
 
     const chosen = wrapper.get('[data-test="day"][aria-current="date"]')
     expect(chosen.attributes('aria-label')).toBe('domingo, 22 de novembro')
@@ -30,7 +30,7 @@ describe('DayPicker', () => {
     // O aparelho está em outro dia: a faixa sai do dia recebido, não do relógio dele.
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2030-01-01T12:00:00.000Z'))
-    const wrapper = mount(DayPicker, { props: { day: '2026-11-30' } })
+    const wrapper = mount(DayPicker, { props: { day: '2026-11-30', today: '2026-11-22' } })
 
     const labels = wrapper.findAll('[data-test="day"]').map((day) => day.attributes('aria-label'))
     expect(labels).toEqual([
@@ -43,7 +43,7 @@ describe('DayPicker', () => {
   })
 
   it('escolher um dia da faixa pede aquele dia', async () => {
-    const wrapper = mount(DayPicker, { props: { day: '2026-11-30' } })
+    const wrapper = mount(DayPicker, { props: { day: '2026-11-30', today: '2026-11-22' } })
 
     await wrapper.findAll('[data-test="day"]')[2]?.trigger('click')
 
@@ -51,18 +51,60 @@ describe('DayPicker', () => {
   })
 
   it('"Próximo dia" pede o dia seguinte, inclusive na virada do mês', async () => {
-    const wrapper = mount(DayPicker, { props: { day: '2026-11-30' } })
+    const wrapper = mount(DayPicker, { props: { day: '2026-11-30', today: '2026-11-22' } })
 
     await wrapper.get('button[aria-label="Próximo dia"]').trigger('click')
 
     expect(wrapper.emitted('change')).toEqual([['2026-12-01']])
   })
 
-  it('"Dia anterior" pede o dia de antes', async () => {
-    const wrapper = mount(DayPicker, { props: { day: '2026-11-22' } })
+  it('"Dia anterior" pede o dia de antes, quando ele não é antes de hoje', async () => {
+    const wrapper = mount(DayPicker, { props: { day: '2026-11-23', today: '2026-11-22' } })
 
+    const previous = wrapper.get('button[aria-label="Dia anterior"]')
+    expect(previous.attributes('disabled')).toBeUndefined()
+    await previous.trigger('click')
+
+    expect(wrapper.emitted('change')).toEqual([['2026-11-22']])
+  })
+
+  it('no dia de hoje, "Dia anterior" fica desabilitado e não pede nada', async () => {
+    const wrapper = mount(DayPicker, { props: { day: '2026-11-22', today: '2026-11-22' } })
+
+    const previous = wrapper.get('button[aria-label="Dia anterior"]')
+    expect(previous.attributes('disabled')).toBeDefined()
+    await previous.trigger('click')
+
+    expect(wrapper.emitted('change')).toBeUndefined()
+  })
+
+  it('o limite é o today recebido da API, mesmo com o relógio do aparelho em outro dia', async () => {
+    // Pelo relógio do aparelho, hoje seria dia 20 e o dia 21 ainda estaria à frente.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-11-20T12:00:00.000Z'))
+    const wrapper = mount(DayPicker, { props: { day: '2026-11-22', today: '2026-11-22' } })
+
+    expect(wrapper.get('button[aria-label="Dia anterior"]').attributes('disabled')).toBeDefined()
     await wrapper.get('button[aria-label="Dia anterior"]').trigger('click')
+    expect(wrapper.emitted('change')).toBeUndefined()
+  })
 
-    expect(wrapper.emitted('change')).toEqual([['2026-11-21']])
+  it('dia da faixa antes de hoje fica desabilitado e não pede nada', async () => {
+    // Acontece quando o today da API vira à meia-noite com a faixa ainda no dia anterior.
+    const wrapper = mount(DayPicker, { props: { day: '2026-11-21', today: '2026-11-22' } })
+
+    const days = wrapper.findAll('[data-test="day"]')
+    expect(days.map((day) => day.attributes('disabled') !== undefined)).toEqual([
+      true,
+      false,
+      false,
+      false,
+      false,
+    ])
+    expect(wrapper.get('button[aria-label="Dia anterior"]').attributes('disabled')).toBeDefined()
+    await days[0]?.trigger('click')
+    expect(wrapper.emitted('change')).toBeUndefined()
+    await days[1]?.trigger('click')
+    expect(wrapper.emitted('change')).toEqual([['2026-11-22']])
   })
 })

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, useId } from 'vue'
 
-// O dia chega da API como `YYYY-MM-DD`. As contas são feitas em UTC sobre a data de
-// calendário, sem passar pelo relógio nem pelo fuso do aparelho.
-const props = defineProps<{ day: string }>()
+// O dia e o "hoje" chegam da API como `YYYY-MM-DD`. As contas são feitas em UTC sobre a
+// data de calendário, sem passar pelo relógio nem pelo fuso do aparelho.
+const props = defineProps<{ day: string; today: string }>()
 
 const emit = defineEmits<{ change: [day: string] }>()
 
@@ -31,6 +31,14 @@ function shift(offsetDays: number): string {
   return new Date(toUtcMs(props.day, offsetDays)).toISOString().slice(0, 10)
 }
 
+// `YYYY-MM-DD` compara como texto na ordem do calendário. O limite é o `today` da API (CA11).
+function isPast(day: string): boolean {
+  return day < props.today
+}
+
+const previousDay = computed(() => shift(-1))
+const canGoBack = computed(() => !isPast(previousDay.value))
+
 // "dom." → "dom": o ponto da abreviação não acrescenta nada no card.
 function short(format: Intl.DateTimeFormat, ms: number): string {
   return format.format(ms).replace('.', '')
@@ -46,13 +54,14 @@ const strip = computed(() =>
       date: new Date(ms).getUTCDate(),
       month: short(monthFormat, ms),
       isChosen: offset === 0,
+      isPast: isPast(shift(offset)),
       onlyWide: offset >= MOBILE_STRIP_SIZE,
     }
   }),
 )
 
 const arrowClass =
-  'flex size-11 shrink-0 items-center justify-center rounded-lg border border-desabilitado bg-superficie text-titulo-card text-texto hover:border-primaria-escura focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primaria-escura'
+  'flex size-11 shrink-0 items-center justify-center rounded-lg border border-desabilitado bg-superficie text-titulo-card text-texto enabled:hover:border-primaria-escura focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primaria-escura disabled:cursor-not-allowed disabled:bg-desabilitado disabled:text-texto-suave'
 </script>
 
 <template>
@@ -63,7 +72,8 @@ const arrowClass =
         type="button"
         aria-label="Dia anterior"
         :class="arrowClass"
-        @click="emit('change', shift(-1))"
+        :disabled="!canGoBack"
+        @click="emit('change', previousDay)"
       >
         ‹
       </button>
@@ -75,12 +85,15 @@ const arrowClass =
         :aria-label="item.label"
         :aria-pressed="item.isChosen"
         :aria-current="item.isChosen ? 'date' : undefined"
-        class="min-w-0 flex-1 flex-col items-center rounded-lg border px-xs py-sm text-texto focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primaria-escura"
+        :disabled="item.isPast"
+        class="min-w-0 flex-1 flex-col items-center rounded-lg border px-xs py-sm focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primaria-escura"
         :class="[
           item.onlyWide ? 'hidden sm:flex' : 'flex',
-          item.isChosen
-            ? 'border-primaria bg-primaria'
-            : 'border-desabilitado bg-superficie hover:border-primaria-escura',
+          item.isPast
+            ? 'cursor-not-allowed border-desabilitado bg-desabilitado text-texto-suave'
+            : item.isChosen
+              ? 'border-primaria bg-primaria text-texto'
+              : 'border-desabilitado bg-superficie text-texto hover:border-primaria-escura',
         ]"
         @click="emit('change', item.day)"
       >

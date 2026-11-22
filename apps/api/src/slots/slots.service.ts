@@ -1,4 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { BlocksService } from '../blocks/blocks.service.js';
 import { CLOCK } from '../common/clock.js';
 import type { Clock } from '../common/clock.js';
@@ -15,6 +21,7 @@ import {
 import { slotStatus } from './slot-status.js';
 
 const HOUR_MS = 60 * 60 * 1000;
+const COURT_NOT_FOUND = 'Quadra não encontrada';
 
 function hoursFrom(startHour: number, endHour: number): number[] {
   return Array.from(
@@ -39,10 +46,23 @@ export class SlotsService {
     const today = saoPauloDate(now);
     const day = date ?? today;
 
-    const court = await this.courts.findActive(courtId);
+    // Id que não é UUID, quadra inexistente e quadra inativa recebem a mesma
+    // resposta, sem revelar qual das três é (CA11). O id mal formado nem vai ao
+    // banco: a coluna é `uuid`, e o PostgreSQL o recusaria com erro.
+    const court = isUUID(courtId)
+      ? await this.courts.findActive(courtId)
+      : null;
     if (!court) {
-      // TODO #2: a Tarefa 7 troca esta grade vazia pelo 404 "Quadra não encontrada" (CA11).
-      return { courtId, date: day, today, slots: [] };
+      throw new NotFoundException(COURT_NOT_FOUND);
+    }
+
+    // O formato da data já foi conferido pelo DTO; aqui só se recusa o passado.
+    // Datas `YYYY-MM-DD` válidas comparam como texto na ordem do calendário.
+    if (day < today) {
+      throw new BadRequestException({
+        message: 'Dados inválidos.',
+        fields: { date: ['Não é possível ver um dia que já passou.'] },
+      });
     }
 
     const rules = await this.schedules.listForWeekday(court.id, weekdayOf(day));

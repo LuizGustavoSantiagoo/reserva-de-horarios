@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import type { LocationQueryRaw } from 'vue-router'
 import { getSlots, listCourts } from '../services/grade.service'
 import type { SlotGrid } from '../services/grade.service'
+import { GradeRefusal } from '../services/grade-refusal'
 import GradePage from './GradePage.vue'
 
 vi.mock('../services/grade.service', () => ({
@@ -37,6 +40,18 @@ function grid(courtId: string, date: string): SlotGrid {
   }
 }
 
+// A página lê e grava a quadra e o dia na query (`?quadra=<id>&dia=YYYY-MM-DD`).
+async function mountAt(query: LocationQueryRaw = {}) {
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/', name: 'grade', component: GradePage }],
+  })
+  await router.push({ path: '/', query })
+  await router.isReady()
+  const wrapper = mount(GradePage, { global: { plugins: [router] } })
+  return { wrapper, router }
+}
+
 describe('GradePage', () => {
   beforeEach(() => {
     // O aparelho está em outro dia: a página não pode usar o relógio dele.
@@ -51,14 +66,14 @@ describe('GradePage', () => {
     vi.resetAllMocks()
   })
 
-  it('mostra que está carregando enquanto a grade não chega', () => {
-    const wrapper = mount(GradePage)
+  it('mostra que está carregando enquanto a grade não chega', async () => {
+    const { wrapper } = await mountAt()
 
     expect(wrapper.text()).toContain('Carregando')
   })
 
   it('lista as quadras ativas, com a primeira já escolhida', async () => {
-    const wrapper = mount(GradePage)
+    const { wrapper } = await mountAt()
     await flushPromises()
 
     const select = wrapper.get('select')
@@ -70,7 +85,7 @@ describe('GradePage', () => {
   })
 
   it('pede a grade da primeira quadra sem dia e abre no dia que a API devolveu', async () => {
-    const wrapper = mount(GradePage)
+    const { wrapper } = await mountAt()
     await flushPromises()
 
     expect(getSlotsMock).toHaveBeenCalledWith('q1', undefined)
@@ -78,7 +93,7 @@ describe('GradePage', () => {
   })
 
   it('mostra, acima dos horários, o nome da quadra escolhida e o dia por extenso', async () => {
-    const wrapper = mount(GradePage)
+    const { wrapper } = await mountAt()
     await flushPromises()
 
     const heading = wrapper.get('[data-test="grid-heading"]')
@@ -92,7 +107,7 @@ describe('GradePage', () => {
   })
 
   it('mostra os horários em ordem com as situações "livre" e "bloqueado"', async () => {
-    const wrapper = mount(GradePage)
+    const { wrapper } = await mountAt()
     await flushPromises()
 
     const slots = wrapper.findAll('[data-test="slot"]')
@@ -104,7 +119,7 @@ describe('GradePage', () => {
   })
 
   it('escolher outra quadra pede a grade dela no mesmo dia', async () => {
-    const wrapper = mount(GradePage)
+    const { wrapper } = await mountAt()
     await flushPromises()
 
     await wrapper.get('select').setValue('q2')
@@ -115,7 +130,7 @@ describe('GradePage', () => {
   })
 
   it('trocar de dia pede a grade daquele dia na quadra escolhida', async () => {
-    const wrapper = mount(GradePage)
+    const { wrapper } = await mountAt()
     await flushPromises()
 
     await wrapper.get('button[aria-label="Próximo dia"]').trigger('click')
@@ -130,7 +145,7 @@ describe('GradePage', () => {
   it('sem nenhuma quadra ativa, mostra "nenhuma quadra disponível" sem seletor de quadra nem de dia', async () => {
     listCourtsMock.mockResolvedValue([])
 
-    const wrapper = mount(GradePage)
+    const { wrapper } = await mountAt()
     await flushPromises()
 
     expect(wrapper.text()).toContain('Nenhuma quadra disponível')
@@ -146,12 +161,120 @@ describe('GradePage', () => {
       slots: [],
     }))
 
-    const wrapper = mount(GradePage)
+    const { wrapper } = await mountAt()
     await flushPromises()
 
     expect(wrapper.text()).toContain('Não há horários neste dia')
     expect(wrapper.find('select').exists()).toBe(true)
     expect(wrapper.find('button[aria-label="Próximo dia"]').exists()).toBe(true)
     expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(0)
+  })
+
+  describe('quadra e dia na URL', () => {
+    it('sem quadra nem dia na URL, pede a primeira quadra sem date e grava na URL a quadra e o dia devolvido', async () => {
+      const { router } = await mountAt()
+      await flushPromises()
+
+      expect(getSlotsMock).toHaveBeenCalledWith('q1', undefined)
+      expect(router.currentRoute.value.query).toEqual({ quadra: 'q1', dia: '2026-11-22' })
+    })
+
+    it('abre a quadra e o dia que vieram no link', async () => {
+      const { wrapper } = await mountAt({ quadra: 'q2', dia: '2026-11-25' })
+      await flushPromises()
+
+      expect(getSlotsMock).toHaveBeenCalledTimes(1)
+      expect(getSlotsMock).toHaveBeenCalledWith('q2', '2026-11-25')
+      expect((wrapper.get('select').element as HTMLSelectElement).value).toBe('q2')
+      expect(wrapper.get('[data-test="grid-heading"]').text()).toContain(
+        'quarta-feira, 25 de novembro',
+      )
+    })
+
+    it('com quadra e sem dia no link, pede aquela quadra sem date e grava o dia devolvido', async () => {
+      const { router } = await mountAt({ quadra: 'q2' })
+      await flushPromises()
+
+      expect(getSlotsMock).toHaveBeenCalledWith('q2', undefined)
+      expect(router.currentRoute.value.query).toEqual({ quadra: 'q2', dia: '2026-11-22' })
+    })
+
+    it('trocar de quadra e de dia atualiza a URL sem recarregar a página', async () => {
+      const { wrapper, router } = await mountAt()
+      await flushPromises()
+
+      await wrapper.get('select').setValue('q2')
+      await flushPromises()
+      expect(router.currentRoute.value.query).toEqual({ quadra: 'q2', dia: '2026-11-22' })
+
+      await wrapper.get('button[aria-label="Próximo dia"]').trigger('click')
+      await flushPromises()
+      expect(router.currentRoute.value.query).toEqual({ quadra: 'q2', dia: '2026-11-23' })
+
+      // A página não foi montada de novo: as quadras foram pedidas uma vez só.
+      expect(listCourtsMock).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('link inválido', () => {
+    it('quadra não encontrada: mostra a mensagem da API e "Voltar para hoje" abre a primeira quadra no dia de hoje', async () => {
+      getSlotsMock.mockImplementation(async (courtId, date) => {
+        if (courtId === 'q9') throw new GradeRefusal('court', 'Quadra não encontrada')
+        return grid(courtId, date ?? '2026-11-22')
+      })
+
+      const { wrapper, router } = await mountAt({ quadra: 'q9', dia: '2026-11-25' })
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('Quadra não encontrada')
+      expect(wrapper.text()).not.toContain('Carregando')
+      expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(0)
+
+      await wrapper.get('button[data-test="back-to-today"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.find('button[data-test="back-to-today"]').exists()).toBe(false)
+      expect(getSlotsMock).toHaveBeenLastCalledWith('q1', undefined)
+      expect(router.currentRoute.value.query).toEqual({ quadra: 'q1', dia: '2026-11-22' })
+      expect(wrapper.text()).not.toContain('Quadra não encontrada')
+      expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(2)
+    })
+
+    it('dia recusado: mostra a mensagem do campo da data e "Voltar para hoje" pede a mesma quadra sem date', async () => {
+      getSlotsMock.mockImplementation(async (courtId, date) => {
+        if (date === '2026-11-01') {
+          throw new GradeRefusal('day', 'Não é possível ver um dia que já passou.')
+        }
+        return grid(courtId, date ?? '2026-11-22')
+      })
+
+      const { wrapper, router } = await mountAt({ quadra: 'q2', dia: '2026-11-01' })
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('Não é possível ver um dia que já passou.')
+      const back = wrapper.get('button[data-test="back-to-today"]')
+      expect(back.text()).toBe('Voltar para hoje')
+
+      await back.trigger('click')
+      await flushPromises()
+
+      expect(getSlotsMock).toHaveBeenLastCalledWith('q2', undefined)
+      expect(router.currentRoute.value.query).toEqual({ quadra: 'q2', dia: '2026-11-22' })
+      expect(wrapper.text()).not.toContain('já passou')
+      expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(2)
+    })
+  })
+
+  it('o seletor de dia não volta para antes do today da API, mesmo com o relógio do aparelho em outro dia', async () => {
+    // O aparelho marca 2030 (beforeEach); a API diz que hoje é 2026-11-22.
+    const { wrapper } = await mountAt()
+    await flushPromises()
+
+    const previous = wrapper.get('button[aria-label="Dia anterior"]')
+    expect(previous.attributes('disabled')).toBeDefined()
+    await previous.trigger('click')
+    await flushPromises()
+
+    expect(getSlotsMock).toHaveBeenCalledTimes(1)
   })
 })

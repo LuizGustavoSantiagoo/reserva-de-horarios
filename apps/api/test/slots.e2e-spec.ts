@@ -243,6 +243,92 @@ describe('grade pública (e2e)', () => {
       ]);
     });
 
+    describe('link inválido (CA11)', () => {
+      type ErrorBody = {
+        statusCode: number;
+        error: string;
+        message: string;
+        fields?: Record<string, string[]>;
+        path: string;
+        timestamp: string;
+      };
+
+      // `path` e `timestamp` variam por natureza; o resto precisa ser idêntico.
+      function withoutPathAndTime(body: ErrorBody) {
+        const { path: _path, timestamp: _timestamp, ...rest } = body;
+        return rest;
+      }
+
+      it('quadra inexistente, inativa e id que não é UUID respondem o mesmo 404 "Quadra não encontrada"', async () => {
+        const inactive = await createCourt('Quadra Inativa', false);
+        await addRule(inactive, 0, 8, 10);
+        const ids = [
+          '00000000-0000-4000-8000-000000000000',
+          inactive,
+          'nao-e-um-uuid',
+        ];
+
+        const bodies = [];
+        for (const id of ids) {
+          const response = await request(app.getHttpServer())
+            .get(`/courts/${id}/slots`)
+            .expect(404);
+          bodies.push(withoutPathAndTime(response.body as ErrorBody));
+        }
+
+        expect(bodies[0]).toEqual({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Quadra não encontrada',
+        });
+        expect(bodies[1]).toEqual(bodies[0]);
+        expect(bodies[2]).toEqual(bodies[0]);
+      });
+
+      it.each([
+        ['mal formada', '02-06-2030'],
+        ['sem zero à esquerda', '2030-6-2'],
+        ['com hora', '2030-06-02T00:00:00Z'],
+        ['texto qualquer', 'amanha'],
+        ['impossível (30 de fevereiro)', '2030-02-30'],
+        ['impossível (mês 13)', '2030-13-01'],
+      ])('data %s responde 400 apontando o campo date', async (_caso, date) => {
+        const response = await request(app.getHttpServer())
+          .get(`/courts/${courtId}/slots`)
+          .query({ date })
+          .expect(400);
+
+        const body = response.body as ErrorBody;
+        expect(body.statusCode).toBe(400);
+        expect(Object.keys(body.fields ?? {})).toEqual(['date']);
+        expect(body.fields?.date.length).toBeGreaterThan(0);
+      });
+
+      it('data antes de hoje em São Paulo responde 400 no mesmo formato, apontando o campo date', async () => {
+        const response = await request(app.getHttpServer())
+          .get(`/courts/${courtId}/slots`)
+          .query({ date: '2030-06-01' })
+          .expect(400);
+
+        const body = response.body as ErrorBody;
+        expect(withoutPathAndTime(body)).toEqual({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Dados inválidos.',
+          fields: { date: ['Não é possível ver um dia que já passou.'] },
+        });
+      });
+
+      it('às 22h de São Paulo, quando em UTC já é o dia seguinte, o dia de São Paulo ainda não passou', async () => {
+        now = SUNDAY_10PM_SP;
+
+        await request(app.getHttpServer())
+          .get(`/courts/${courtId}/slots`)
+          .query({ date: SUNDAY })
+          .expect(200);
+      });
+    });
+
     describe('com reservas', () => {
       // Prazo já vencido segundo o CLOCK (5h de São Paulo, antes das 6h do `now`).
       const EXPIRED_DEADLINE = new Date('2030-06-02T08:00:00.000Z');
