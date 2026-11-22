@@ -45,6 +45,25 @@ describe('CORS (e2e)', () => {
     expect(response.headers['access-control-allow-origin']).toBe(allowedOrigin);
   });
 
+  // O Authorization: Bearer do painel não é um cabeçalho "simples": o navegador
+  // pergunta antes (preflight), e o preflight não leva token — o guard não pode barrá-lo.
+  it('libera o preflight que pede o cabeçalho authorization, numa rota protegida', async () => {
+    const response = await request(app.getHttpServer())
+      .options('/users/me')
+      .set('Origin', allowedOrigin)
+      .set('Access-Control-Request-Method', 'GET')
+      .set('Access-Control-Request-Headers', 'authorization')
+      .expect(204);
+
+    expect(response.headers['access-control-allow-origin']).toBe(allowedOrigin);
+    expect(
+      String(response.headers['access-control-allow-headers'])
+        .toLowerCase()
+        .split(',')
+        .map((header) => header.trim()),
+    ).toContain('authorization');
+  });
+
   it('não libera outra origem', async () => {
     const response = await request(app.getHttpServer())
       .get('/courts')

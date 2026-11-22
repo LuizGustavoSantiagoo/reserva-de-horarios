@@ -255,7 +255,7 @@ linha no Histórico e versão nova a cada um):
     credenciais), `apps/api/src/app.module.ts`, `apps/api/test/auth.e2e-spec.ts`,
     `apps/api/test/helpers/auth.ts`, `apps/api/package.json` (`@nestjs/jwt`)
 
-- [ ] **Tarefa 3 — Fechar as rotas que não são públicas**
+- [x] **Tarefa 3 — Fechar as rotas que não são públicas**
   - Cobre: CA5, CA6, CA12 (com `/users/me`; `/users` e `/users/:id` entram no teste do
     Swagger nas Tarefas 4 e 5)
   - Teste primeiro: e2e `users.e2e-spec.ts`: `GET /users/me` sem cabeçalho, com valor sem

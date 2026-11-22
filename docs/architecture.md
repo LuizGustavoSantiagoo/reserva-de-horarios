@@ -1,7 +1,7 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.6.0
+**Versão:** 1.7.0
 **Última atualização:** 2026-11-22
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
@@ -242,7 +242,10 @@ repassam o comando a cada app com `npm --prefix`.
 - **Swagger UI interativo (ID14):** `@nestjs/swagger`, montado em **`/docs`** pelo
   `SwaggerModule.setup('docs', ...)`; o documento JSON fica em **`/docs-json`**.
   `DocumentBuilder` com `addBearerAuth()` e `@ApiBearerAuth()` nos controllers
-  administrativos, para testar as rotas protegidas direto na UI.
+  protegidos (toda rota sem `@Public()`, não só as de `ADMIN`), para testar as rotas
+  protegidas direto na UI pelo botão **Authorize**; as rotas públicas não declaram
+  segurança. A montagem fica em `src/common/swagger.ts` (`setupSwagger(app)`), chamada
+  pelo `main.ts` e pelos testes de ponta a ponta.
 - Todo DTO de entrada e de saída carrega os decorators do Swagger: rota sem
   documentação é rota incompleta na revisão.
 - O frontend roda `npm run api:types` (`openapi-typescript` sobre o `/docs-json`
@@ -277,12 +280,13 @@ tudo daquele domínio junto. É essa pasta que o Mapa de Domínios (§6) aponta.
     │   ├── prisma/        # schema.prisma, migrations/ e seed
     │   ├── prisma.config.ts
     │   ├── src/
-    │   │   ├── main.ts            # cabeçalhos de segurança, Swagger, rawBody
-    │   │   ├── app.module.ts      # APP_PIPE, APP_INTERCEPTOR e APP_FILTER (globais)
-    │   │   ├── common/            # exception filter, interceptor, guards, decorators (@Public, @Roles)
+    │   │   ├── main.ts            # cabeçalhos de segurança, CORS e Swagger (chama enableCors e setupSwagger), rawBody
+    │   │   ├── app.module.ts      # APP_PIPE, APP_INTERCEPTOR, APP_FILTER e APP_GUARD (globais)
+    │   │   ├── common/            # exception filter, interceptor, cors.ts, swagger.ts; auth/ com guards e decorators (@Public, @Roles, @CurrentUser)
     │   │   ├── config/            # ConfigModule e validação das variáveis
     │   │   ├── prisma/            # PrismaService (módulo global)
     │   │   ├── auth/              # login do administrador e emissão do JWT
+│   │   ├── users/             # usuários do painel (ADMIN e OPERATOR) e perfil de quem está logado
     │   │   ├── arena/             # dados da arena única
     │   │   ├── courts/            # quadras
     │   │   ├── schedules/         # agenda semanal (ScheduleRule)
@@ -515,6 +519,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | 2026-11-15 | 1.2.1 | Padrões de API (manutenção): `ValidationPipe`, interceptor e filtro registrados no `AppModule` (`APP_PIPE`, `APP_INTERCEPTOR`, `APP_FILTER`); `main.ts` fica com os cabeçalhos de segurança (`app.useSecurityHeaders()`) e o Swagger |
 | 2026-11-22 | 1.5.0 | Merge da `main` na branch da US01 (#2): reúne a 1.2.1 (padrões de API na `main`) com a 1.3.0 e a 1.4.0 (branch da US01) |
 | 2026-11-22 | 1.6.0 | Tarefa 1 da US06 (#7): `AdminUser.role` passa a `ADMIN` \| `OPERATOR` (§5.1); `ADMIN_EMAIL` e `ADMIN_PASSWORD` lidas só pelo seed via `prisma.config.ts`, padrão de `JWT_EXPIRES_IN` (28800 s) e `JWT_SECRET` do CI gerado a cada execução (§2.1, item 11) |
+| 2026-11-22 | 1.7.0 | Tarefa 3 da US06 (#7): `@ApiBearerAuth()` nos controllers protegidos, e não só nos administrativos, e Swagger montado por `setupSwagger` em `src/common/swagger.ts` (§2.2); pasta `users/` na API, `APP_GUARD` no `app.module.ts`, `common/auth/` e o comentário do `main.ts` na árvore (§3) |
 
 ---
 

@@ -6,6 +6,7 @@ import {
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
+import { Public } from '../common/auth/public.decorator.js';
 import { CourtsService } from './courts.service.js';
 import { CourtDto } from './dto/court.dto.js';
 
@@ -15,6 +16,7 @@ import { CourtDto } from './dto/court.dto.js';
 export class CourtsController {
   constructor(private readonly courts: CourtsService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Lista as quadras ativas, por nome (rota pública)' })
   @ApiResponse({

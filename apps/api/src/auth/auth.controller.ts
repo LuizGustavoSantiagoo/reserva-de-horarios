@@ -6,6 +6,7 @@ import {
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
+import { Public } from '../common/auth/public.decorator.js';
 import { AuthService } from './auth.service.js';
 import { AccessTokenDto } from './dto/access-token.dto.js';
 import { LoginDto } from './dto/login.dto.js';
@@ -16,6 +17,7 @@ import { LoginDto } from './dto/login.dto.js';
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
