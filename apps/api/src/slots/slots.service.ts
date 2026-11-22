@@ -1,0 +1,65 @@
+import { Inject, Injectable } from '@nestjs/common';
+import { BlocksService } from '../blocks/blocks.service.js';
+import { CLOCK } from '../common/clock.js';
+import type { Clock } from '../common/clock.js';
+import { CourtsService } from '../courts/courts.service.js';
+import { SchedulesService } from '../schedules/schedules.service.js';
+import type { SlotGridDto } from './dto/slot-grid.dto.js';
+import {
+  saoPauloDate,
+  saoPauloHourToInstant,
+  weekdayOf,
+} from './sao-paulo-time.js';
+import { slotStatus } from './slot-status.js';
+
+const HOUR_MS = 60 * 60 * 1000;
+
+function hoursFrom(startHour: number, endHour: number): number[] {
+  return Array.from(
+    { length: endHour - startHour },
+    (_, index) => startHour + index,
+  );
+}
+
+@Injectable()
+export class SlotsService {
+  constructor(
+    private readonly courts: CourtsService,
+    private readonly schedules: SchedulesService,
+    private readonly blocks: BlocksService,
+    @Inject(CLOCK) private readonly clock: Clock,
+  ) {}
+
+  /** A grade da quadra no dia pedido; sem dia, a de hoje em São Paulo. */
+  async findGrid(courtId: string, date?: string): Promise<SlotGridDto> {
+    const today = saoPauloDate(this.clock.now());
+    const day = date ?? today;
+
+    const court = await this.courts.findActive(courtId);
+    if (!court) {
+      // TODO #2: a Tarefa 7 troca esta grade vazia pelo 404 "Quadra não encontrada" (CA11).
+      return { courtId, date: day, today, slots: [] };
+    }
+
+    const rules = await this.schedules.listForWeekday(court.id, weekdayOf(day));
+    const starts = rules
+      .flatMap(({ startHour, endHour }) => hoursFrom(startHour, endHour))
+      .map((hour) => saoPauloHourToInstant(day, hour));
+
+    const blockedStarts = await this.blocks.listBlockedStarts(court.id, starts);
+    const blocked = new Set(
+      blockedStarts.map((startsAt) => startsAt.getTime()),
+    );
+
+    return {
+      courtId: court.id,
+      date: day,
+      today,
+      slots: starts.map((startsAt) => ({
+        startsAt: startsAt.toISOString(),
+        endsAt: new Date(startsAt.getTime() + HOUR_MS).toISOString(),
+        status: slotStatus({ blocked: blocked.has(startsAt.getTime()) }),
+      })),
+    };
+  }
+}

@@ -32,6 +32,10 @@ jobs:
     env:
       DATABASE_URL: postgresql://reserva:reserva-ci@localhost:5432/reserva?schema=public
       DATABASE_URL_UNPOOLED: postgresql://reserva:reserva-ci@localhost:5432/reserva?schema=public
+      # Origem do `vite preview` (Playwright no CI), liberada pelo CORS da API.
+      CORS_ORIGIN: http://localhost:4173
+      # Endereço da API que o build do web põe no bundle; sem ela, a página da grade não carrega.
+      VITE_API_URL: http://localhost:3000
 
     steps:
       - uses: actions/checkout@v6

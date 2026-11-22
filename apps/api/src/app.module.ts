@@ -7,12 +7,16 @@ import { AllExceptionsFilter } from './common/all-exceptions.filter.js';
 import { TransformInterceptor } from './common/transform.interceptor.js';
 import { createValidationPipe } from './common/validation.pipe.js';
 import { validateEnv } from './config/env.validation.js';
+import { CourtsModule } from './courts/courts.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { SlotsModule } from './slots/slots.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     PrismaModule,
+    CourtsModule,
+    SlotsModule,
   ],
   controllers: [AppController],
   providers: [

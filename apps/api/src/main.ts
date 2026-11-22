@@ -1,11 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
+import { enableCors } from './common/cors.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // Middleware: cabeçalhos de segurança em toda resposta, antes de qualquer rota.
   app.useSecurityHeaders();
+  // O frontend chama a API de outra origem (VITE_API_URL): sem isto, o navegador barra a resposta.
+  enableCors(app);
 
   const config = new DocumentBuilder()
     .setTitle('API da Reserva de Horários')
