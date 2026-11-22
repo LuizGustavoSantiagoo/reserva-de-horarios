@@ -6,7 +6,7 @@ import { AppModule } from '../src/app.module.js';
 import { CLOCK } from '../src/common/clock.js';
 import type { Clock } from '../src/common/clock.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
-import { resetDatabase } from './helpers/db.js';
+import { createReservation, resetDatabase } from './helpers/db.js';
 
 // 2030-06-02 é um domingo (weekday 0) e 2030-06-03, uma segunda (weekday 1).
 // São Paulo está em UTC-3: 8h em São Paulo são 11h em UTC.
@@ -195,6 +195,129 @@ describe('grade pública (e2e)', () => {
             },
           ],
         },
+      });
+    });
+
+    describe('com reservas', () => {
+      // Prazo já vencido segundo o CLOCK (5h de São Paulo, antes das 6h do `now`).
+      const EXPIRED_DEADLINE = new Date('2030-06-02T08:00:00.000Z');
+      const MARIA_PHONE = '11987654321';
+      const PEDRO_PHONE = '21912345678';
+      let reservedCourt: string;
+
+      // Horas cheias de domingo em São Paulo (UTC-3).
+      const at = (hour: number): Date =>
+        new Date(`2030-06-02T${String(hour + 3).padStart(2, '0')}:00:00.000Z`);
+
+      beforeEach(async () => {
+        reservedCourt = await createCourt('Quadra Reservas');
+        await addRule(reservedCourt, 0, 8, 14);
+        // 8h: confirmada.
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(8),
+          status: 'CONFIRMED',
+          holdExpiresAt: EXPIRED_DEADLINE,
+          customerName: '  maria  da Silva ',
+          customerPhone: MARIA_PHONE,
+        });
+        // 9h: pré-reserva com os 3 minutos vencidos, ainda HELD no banco (CA7).
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(9),
+          status: 'HELD',
+          holdExpiresAt: EXPIRED_DEADLINE,
+        });
+        // 10h: pendente com a cobrança vencida, ainda PENDING no banco (CA7).
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(10),
+          status: 'PENDING',
+          holdExpiresAt: EXPIRED_DEADLINE,
+          customerName: 'Pedro Alves',
+          customerPhone: PEDRO_PHONE,
+        });
+        // 11h: já marcada como expirada; 12h: cancelada.
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(11),
+          status: 'EXPIRED',
+          holdExpiresAt: EXPIRED_DEADLINE,
+        });
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(12),
+          status: 'CANCELLED',
+          holdExpiresAt: EXPIRED_DEADLINE,
+          customerName: 'Bruno Lima',
+          customerPhone: '31900000000',
+        });
+        // 13h: uma expirada e, depois dela, uma pré-reserva nova no mesmo horário.
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(13),
+          status: 'EXPIRED',
+          holdExpiresAt: EXPIRED_DEADLINE,
+        });
+        await createReservation(prisma, {
+          courtId: reservedCourt,
+          startsAt: at(13),
+          status: 'HELD',
+          holdExpiresAt: new Date('2030-06-02T09:03:00.000Z'),
+        });
+      });
+
+      it('mostra reservado só com o primeiro nome, em reserva sem nome mesmo com o prazo vencido, e livre o que expirou ou foi cancelado', async () => {
+        const response = await request(app.getHttpServer())
+          .get(`/courts/${reservedCourt}/slots`)
+          .expect(200);
+
+        const slots = (
+          response.body as {
+            data: { slots: Record<string, unknown>[] };
+          }
+        ).data.slots;
+        expect(
+          slots.map(({ startsAt, status, firstName }) => ({
+            startsAt,
+            status,
+            firstName,
+          })),
+        ).toEqual([
+          {
+            startsAt: at(8).toISOString(),
+            status: 'RESERVED',
+            firstName: 'Maria',
+          },
+          { startsAt: at(9).toISOString(), status: 'HELD' },
+          { startsAt: at(10).toISOString(), status: 'HELD' },
+          { startsAt: at(11).toISOString(), status: 'FREE' },
+          { startsAt: at(12).toISOString(), status: 'FREE' },
+          { startsAt: at(13).toISOString(), status: 'HELD' },
+        ]);
+        // `firstName` só existe no horário reservado.
+        expect(slots.filter((slot) => 'firstName' in slot)).toHaveLength(1);
+      });
+
+      it('a resposta pública nunca contém telefone, nome completo nem o nome de quem não confirmou', async () => {
+        const response = await request(app.getHttpServer())
+          .get(`/courts/${reservedCourt}/slots`)
+          .expect(200);
+
+        const body = JSON.stringify(response.body);
+        expect(body).toContain('Maria');
+        for (const secret of [
+          MARIA_PHONE,
+          PEDRO_PHONE,
+          '31900000000',
+          'Silva',
+          'maria  da',
+          'Pedro',
+          'Alves',
+          'Bruno',
+        ]) {
+          expect(body).not.toContain(secret);
+        }
       });
     });
   });

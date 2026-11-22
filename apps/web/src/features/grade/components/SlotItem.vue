@@ -6,12 +6,19 @@ const props = defineProps<{ item: Slot }>()
 
 const LABELS: Record<SlotStatus, string> = {
   FREE: 'livre',
+  HELD: 'em reserva',
+  RESERVED: 'reservado',
   BLOCKED: 'bloqueado',
 }
 
+// Ocupado, em reserva ou bloqueado: card esmaecido no tom `desabilitado` (design-tokens).
+const UNAVAILABLE_STYLE = 'border-desabilitado bg-desabilitado text-texto-suave'
+
 const STYLES: Record<SlotStatus, string> = {
   FREE: 'border-desabilitado bg-superficie text-texto',
-  BLOCKED: 'border-desabilitado bg-desabilitado text-texto-suave',
+  HELD: UNAVAILABLE_STYLE,
+  RESERVED: UNAVAILABLE_STYLE,
+  BLOCKED: UNAVAILABLE_STYLE,
 }
 
 // O horário é o da arena, não o do aparelho.
@@ -23,6 +30,13 @@ const hourFormat = new Intl.DateTimeFormat('pt-BR', {
 
 const startsAt = computed(() => hourFormat.format(new Date(props.item.startsAt)))
 const endsAt = computed(() => hourFormat.format(new Date(props.item.endsAt)))
+
+// No reservado, o primeiro nome vem na segunda linha, como no protótipo.
+const label = computed(() =>
+  props.item.status === 'RESERVED' && props.item.firstName
+    ? `${LABELS.RESERVED} · ${props.item.firstName}`
+    : LABELS[props.item.status],
+)
 </script>
 
 <template>
@@ -42,7 +56,7 @@ const endsAt = computed(() => hourFormat.format(new Date(props.item.endsAt)))
         aria-hidden="true"
         class="size-2 shrink-0 rounded-full bg-sucesso"
       />
-      {{ LABELS[item.status] }}
+      <span data-test="slot-status">{{ label }}</span>
     </p>
   </li>
 </template>
