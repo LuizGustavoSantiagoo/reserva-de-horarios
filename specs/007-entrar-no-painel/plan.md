@@ -219,7 +219,7 @@ linha no Histórico e versão nova a cada um):
 
 ## Tarefas
 
-- [ ] **Tarefa 1 — Criar o administrador pelo seed**
+- [x] **Tarefa 1 — Criar o administrador pelo seed**
   - Cobre: CA1
   - Teste primeiro: (a) unitário de `env.validation.ts`: falta de `JWT_SECRET` derruba
     com o nome dela; `JWT_EXPIRES_IN` ausente vira `28800`; valor não inteiro ou ≤ 0

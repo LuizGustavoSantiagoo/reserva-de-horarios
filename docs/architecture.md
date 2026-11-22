@@ -1,7 +1,7 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.5.0
+**Versão:** 1.6.0
 **Última atualização:** 2026-11-22
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
@@ -207,9 +207,16 @@ repassam o comando a cada app com `npm --prefix`.
     `process.env` fora do módulo de configuração e do `prisma.config.ts`. Variáveis,
     só pelo **nome**: `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `JWT_SECRET`,
     `JWT_EXPIRES_IN`, `ABACATEPAY_API_KEY`, `ABACATEPAY_WEBHOOK_SECRET`,
-    `CORS_ORIGIN`, `PORT`. O repositório tem só o `.env.example`, com nomes e
+    `CORS_ORIGIN`, `PORT`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. `JWT_EXPIRES_IN` é a
+    validade do token em segundos (inteiro positivo), com padrão `28800` (8 h) quando
+    ausente. `ADMIN_EMAIL` e `ADMIN_PASSWORD` são lidas só pelo seed, através do
+    `prisma.config.ts` (export nomeado `adminSeedEnv`), e não entram no `ConfigModule`:
+    a API não precisa delas para subir. O repositório tem só o `.env.example`, com nomes e
     valores fictícios; `.env` está no `.gitignore`. Em produção, os valores vivem nos
-    *secrets* da plataforma de hospedagem; no CI, nos *secrets* do GitHub Actions.
+    *secrets* da plataforma de hospedagem; no CI, nos *secrets* do GitHub Actions —
+    exceto o `JWT_SECRET`, gerado a cada execução num passo do workflow
+    (`openssl rand -hex 32`), sem valor escrito no YAML; as `ADMIN_*` não entram no CI
+    (o e2e do seed as passa ao processo filho).
     O `prisma.config.ts` carrega o `apps/api/.env` com o `process.loadEnvFile()`
     nativo do Node (só se o arquivo existir — no CI ele não existe), sem a
     dependência `dotenv`. O cliente Prisma é gerado em `apps/api/generated/prisma`
@@ -358,7 +365,7 @@ porque espelham a interface, que é em português.
 | Aviso de pagamento | `PaymentEvent` | `id`, `paymentId`, `providerEventId` (único), `type`, `payload`, `receivedAt` |
 | Código de cancelamento | `Purchase.cancelCodeHash` | só o hash; o código em claro aparece uma vez na tela e nunca é gravado |
 | Cliente | **sem entidade** — `Purchase.customerName` e `Purchase.customerPhone` | não há conta de cliente (RN05) |
-| Administrador | `AdminUser` | `id`, `email`, `passwordHash`, `role` (`ADMIN`) |
+| Administrador / Operador (usuário do painel) | `AdminUser` | `id`, `email` (único, guardado sem espaços nas pontas e em minúsculas), `passwordHash`, `role` (`ADMIN` \| `OPERATOR`) |
 
 Nomes de status em inglês e maiúsculas; a tradução para a tela (`HELD` → "em
 reserva", `CONFIRMED` → "reservado") é feita só no frontend.
@@ -507,6 +514,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | 2026-11-13 | 1.4.0 | Tarefa 2 da US01 (#2): `VITE_API_URL` registrada como a variável do frontend, sem endereço padrão no código (§2.1, item 11) |
 | 2026-11-15 | 1.2.1 | Padrões de API (manutenção): `ValidationPipe`, interceptor e filtro registrados no `AppModule` (`APP_PIPE`, `APP_INTERCEPTOR`, `APP_FILTER`); `main.ts` fica com os cabeçalhos de segurança (`app.useSecurityHeaders()`) e o Swagger |
 | 2026-11-22 | 1.5.0 | Merge da `main` na branch da US01 (#2): reúne a 1.2.1 (padrões de API na `main`) com a 1.3.0 e a 1.4.0 (branch da US01) |
+| 2026-11-22 | 1.6.0 | Tarefa 1 da US06 (#7): `AdminUser.role` passa a `ADMIN` \| `OPERATOR` (§5.1); `ADMIN_EMAIL` e `ADMIN_PASSWORD` lidas só pelo seed via `prisma.config.ts`, padrão de `JWT_EXPIRES_IN` (28800 s) e `JWT_SECRET` do CI gerado a cada execução (§2.1, item 11) |
 
 ---
 
