@@ -2,10 +2,12 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useSession } from '@/shared/composables/useSession'
-import { ProfileError, getMe, type Role, type User } from '../services/users.service'
+import { ProfileError, getMe, type Role } from '../services/users.service'
 
 const router = useRouter()
 const session = useSession()
+// O perfil mora na sessão, a mesma que o guard de papel usa: quem buscar primeiro grava.
+const user = session.profile
 
 // Rótulos dos papéis na tela (CA15): a API devolve o código, o português é só do front.
 const ROLE_LABELS: Record<Role, string> = {
@@ -13,15 +15,15 @@ const ROLE_LABELS: Record<Role, string> = {
   OPERATOR: 'Operador',
 }
 
-const user = ref<User>()
 const errorMessage = ref<string>()
 
 // Falha de rede ou do servidor não é sessão vencida: mostra o erro e mantém o token (CA15).
 // O `401` o client já tratou, limpando a sessão e levando ao login (CA14).
 async function loadProfile(): Promise<void> {
+  if (session.profile.value) return
   errorMessage.value = undefined
   try {
-    user.value = await getMe()
+    session.setProfile(await getMe())
   } catch (error) {
     if (!(error instanceof ProfileError)) throw error
     errorMessage.value = error.message
@@ -54,7 +56,7 @@ onMounted(loadProfile)
         <!-- Esconder o item é conforto: quem barra o Operador é a API (CA10, CA16). -->
         <RouterLink
           v-if="user?.role === 'ADMIN'"
-          to="/admin/operadores/novo"
+          :to="{ name: 'admin-novo-operador' }"
           class="text-corpo font-semibold text-primaria-escura underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primaria-escura"
         >
           Cadastrar operador

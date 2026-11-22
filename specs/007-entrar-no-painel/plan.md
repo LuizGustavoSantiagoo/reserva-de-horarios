@@ -365,7 +365,7 @@ linha no Histórico e versão nova a cada um):
     `apps/web/src/features/admin/services/users.service.ts` e spec,
     `apps/web/src/router/index.ts`, `apps/web/src/router/guards.ts` e spec
 
-- [ ] **Tarefa 10 — Cadastrar operador pela tela**
+- [x] **Tarefa 10 — Cadastrar operador pela tela**
   - Cobre: CA17, CA16 (o `OPERATOR` que abre `/admin/operadores/novo` volta a `/admin`;
     o `403` da API já foi provado na Tarefa 4)
   - Teste primeiro: componente `CadastrarOperadorPage`: envio válido → "Operador

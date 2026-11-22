@@ -52,4 +52,49 @@ describe('useSession', () => {
     const reloaded = await loadSession()
     expect(reloaded.useSession().token.value).toBeNull()
   })
+
+  describe('perfil de quem está logado', () => {
+    const ADMIN = { id: 'u1', email: 'ana@arena.com', role: 'ADMIN' as const }
+
+    it('começa sem perfil e guarda o que recebe em setProfile', async () => {
+      const { useSession } = await loadSession()
+      useSession().setToken('abc.def.ghi')
+      expect(useSession().profile.value).toBeNull()
+
+      useSession().setProfile(ADMIN)
+
+      expect(useSession().profile.value).toEqual(ADMIN)
+    })
+
+    it('clearSession apaga o perfil junto com o token', async () => {
+      const { useSession } = await loadSession()
+      useSession().setToken('abc.def.ghi')
+      useSession().setProfile(ADMIN)
+
+      useSession().clearSession()
+
+      expect(useSession().profile.value).toBeNull()
+    })
+
+    it('um token novo descarta o perfil do token anterior', async () => {
+      const { useSession } = await loadSession()
+      useSession().setToken('abc.def.ghi')
+      useSession().setProfile(ADMIN)
+
+      useSession().setToken('outro.token.jwt')
+
+      expect(useSession().profile.value).toBeNull()
+    })
+
+    it('o perfil não vai para o sessionStorage: recarregar a página o busca de novo', async () => {
+      const first = await loadSession()
+      first.useSession().setToken('abc.def.ghi')
+      first.useSession().setProfile(ADMIN)
+
+      const reloaded = await loadSession()
+
+      expect(reloaded.useSession().token.value).toBe('abc.def.ghi')
+      expect(reloaded.useSession().profile.value).toBeNull()
+    })
+  })
 })

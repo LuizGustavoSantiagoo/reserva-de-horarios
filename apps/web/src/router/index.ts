@@ -30,6 +30,13 @@ const routes: RouteRecordRaw[] = [
         name: 'admin',
         component: () => import('@/features/admin/pages/PainelPage.vue'),
       },
+      {
+        // Filha de `/admin`: herda o `requiresAuth`, e o `roles` barra o Operador (CA16).
+        path: 'operadores/novo',
+        name: 'admin-novo-operador',
+        component: () => import('@/features/admin/pages/CadastrarOperadorPage.vue'),
+        meta: { roles: ['ADMIN'] },
+      },
     ],
   },
 ]

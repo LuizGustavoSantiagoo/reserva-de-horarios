@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { RouterView, createMemoryHistory, type Router } from 'vue-router'
 import { useSession } from '@/shared/composables/useSession'
-import { getMe } from '@/features/admin/services/users.service'
+import { ProfileError, getMe, type createOperator } from '@/features/admin/services/users.service'
 import type { getSlots, listCourts } from '@/features/grade/services/grade.service'
 import { createAppRouter } from './index'
 
@@ -14,7 +14,13 @@ vi.hoisted(() => {
 
 vi.mock('@/features/admin/services/users.service', () => {
   class ProfileError extends Error {}
-  return { ProfileError, getMe: vi.fn<typeof getMe>() }
+  class CreateOperatorError extends Error {}
+  return {
+    ProfileError,
+    CreateOperatorError,
+    getMe: vi.fn<typeof getMe>(),
+    createOperator: vi.fn<typeof createOperator>(),
+  }
 })
 
 vi.mock('@/features/grade/services/grade.service', () => ({
@@ -90,5 +96,67 @@ describe('guard de sessão do painel', () => {
     await flushPromises()
     expect(router.currentRoute.value.fullPath).toBe('/admin/login')
     expect(wrapper.text()).not.toContain('ana@arena.com')
+  })
+})
+
+describe('guard de papel do cadastro de operador', () => {
+  const ADMIN = { id: 'u1', email: 'ana@arena.com', role: 'ADMIN' as const }
+  const OPERATOR = { id: 'u2', email: 'bia@arena.com', role: 'OPERATOR' as const }
+
+  afterEach(() => {
+    vi.resetAllMocks()
+    useSession().clearSession()
+  })
+
+  it('sem token, /admin/operadores/novo vai para /admin/login', async () => {
+    const router = makeRouter()
+
+    await router.push('/admin/operadores/novo')
+
+    expect(router.currentRoute.value.fullPath).toBe('/admin/login')
+    expect(getMeMock).not.toHaveBeenCalled()
+  })
+
+  it('o OPERATOR que abre /admin/operadores/novo volta a /admin', async () => {
+    getMeMock.mockResolvedValue(OPERATOR)
+    useSession().setToken('jwt-operador')
+    const router = makeRouter()
+
+    await router.push('/admin/operadores/novo')
+
+    expect(router.currentRoute.value.fullPath).toBe('/admin')
+  })
+
+  it('o ADMIN entra no cadastro de operador, e o perfil fica guardado na sessão', async () => {
+    getMeMock.mockResolvedValue(ADMIN)
+    useSession().setToken('jwt-admin')
+    const router = makeRouter()
+
+    await router.push('/admin/operadores/novo')
+
+    expect(router.currentRoute.value.name).toBe('admin-novo-operador')
+    expect(useSession().profile.value).toEqual(ADMIN)
+  })
+
+  it('com o perfil já guardado na sessão, não busca o getMe de novo', async () => {
+    useSession().setToken('jwt-operador')
+    useSession().setProfile(OPERATOR)
+    const router = makeRouter()
+
+    await router.push('/admin/operadores/novo')
+
+    expect(getMeMock).not.toHaveBeenCalled()
+    expect(router.currentRoute.value.fullPath).toBe('/admin')
+  })
+
+  it('se o getMe falhar por rede, vai para /admin, onde o layout mostra o erro', async () => {
+    getMeMock.mockRejectedValue(new ProfileError('Não foi possível conectar ao servidor.'))
+    useSession().setToken('jwt-admin')
+    const router = makeRouter()
+
+    await router.push('/admin/operadores/novo')
+
+    expect(router.currentRoute.value.fullPath).toBe('/admin')
+    expect(useSession().token.value).toBe('jwt-admin')
   })
 })

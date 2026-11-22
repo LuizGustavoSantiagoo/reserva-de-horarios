@@ -27,7 +27,8 @@ function makeRouter(): Router {
         component: AdminLayout,
         children: [
           { path: '', name: 'admin', component: Empty },
-          { path: 'operadores/novo', component: Empty },
+          // O link do menu aponta para o nome da rota, não para o caminho escrito à mão.
+          { path: 'operadores/cadastro-de-teste', name: 'admin-novo-operador', component: Empty },
         ],
       },
     ],
@@ -71,7 +72,7 @@ describe('AdminLayout', () => {
     expect(wrapper.text()).toContain('ana@arena.com')
     expect(wrapper.text()).toContain('Administrador')
     expect(findLink(wrapper, 'Cadastrar operador')?.attributes('href')).toBe(
-      '/admin/operadores/novo',
+      '/admin/operadores/cadastro-de-teste',
     )
   })
 
@@ -135,5 +136,26 @@ describe('AdminLayout', () => {
     expect(getMeMock).toHaveBeenCalledTimes(2)
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('ana@arena.com')
+    // O perfil que chegou no Tentar de novo fica na sessão: o guard não busca de novo.
+    expect(useSession().profile.value).toEqual(ADMIN)
+  })
+
+  it('com o perfil já na sessão (o guard buscou), mostra-o sem chamar o getMe de novo', async () => {
+    useSession().setProfile(ADMIN)
+
+    const { wrapper } = await mountLayout()
+
+    expect(getMeMock).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('ana@arena.com')
+    expect(findLink(wrapper, 'Cadastrar operador')).toBeDefined()
+  })
+
+  it('sem perfil na sessão, busca pelo getMe e o grava na sessão', async () => {
+    getMeMock.mockResolvedValue(OPERATOR)
+
+    await mountLayout()
+
+    expect(getMeMock).toHaveBeenCalledTimes(1)
+    expect(useSession().profile.value).toEqual(OPERATOR)
   })
 })
