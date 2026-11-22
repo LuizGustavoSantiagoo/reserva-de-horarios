@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { LocationQuery, LocationQueryRaw } from 'vue-router'
 import CourtPicker from '../components/CourtPicker.vue'
@@ -83,12 +83,21 @@ function toggleSlot(startsAt: string): void {
   else selection.value.add(key)
 }
 
+// Põe a grade na tela e tira da seleção os horários dela que deixaram de estar livres (CA9).
+// Vale para a atualização automática e para a volta a uma grade com seleção antiga.
+function showGrid(loaded: SlotGrid): void {
+  grid.value = loaded
+  for (const slot of loaded.slots) {
+    if (slot.status !== 'FREE') selection.value.delete(selectionKey(loaded.courtId, slot.startsAt))
+  }
+}
+
 // Sem dia escolhido, a grade é pedida sem `date`: o "hoje" é sempre o do servidor.
 async function loadGrid(day?: string): Promise<void> {
   if (!courtId.value) return
   try {
     const loaded = await getSlots(courtId.value, day)
-    grid.value = loaded
+    showGrid(loaded)
     refusal.value = undefined
     await writeQuery(loaded.courtId, loaded.date)
   } catch (error) {
@@ -122,11 +131,34 @@ function selectDay(day: string): void {
   void loadGrid(day)
 }
 
+// Atualização automática (CA9): pede de novo só a grade em exibição, sem limpar a tela —
+// a grade antiga fica visível até a nova chegar.
+async function refreshGrid(): Promise<void> {
+  const shown = grid.value
+  if (!shown) return
+  const loaded = await getSlots(shown.courtId, shown.date)
+  // Se a pessoa trocou de quadra ou de dia enquanto a resposta vinha, ela já é velha.
+  if (grid.value?.courtId !== shown.courtId || grid.value.date !== shown.date) return
+  showGrid(loaded)
+}
+
+const POLL_INTERVAL_MS = 15_000
+let pollTimer: ReturnType<typeof setInterval> | undefined
+
 onMounted(async () => {
+  pollTimer = setInterval(() => {
+    // O aviso "não foi possível atualizar" é da Tarefa 10; até lá, a falha só não pode
+    // derrubar o intervalo nem virar rejeição sem tratamento.
+    refreshGrid().catch(() => {})
+  }, POLL_INTERVAL_MS)
   courts.value = await listCourts()
   if (courts.value.length === 0) return
   courtId.value = queryText(route.query, 'quadra') ?? courts.value[0]?.id
   await loadGrid(queryText(route.query, 'dia'))
+})
+
+onUnmounted(() => {
+  clearInterval(pollTimer)
 })
 </script>
 

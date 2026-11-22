@@ -131,7 +131,7 @@ sobrescrito no `TestingModule`.
   - Teste primeiro: componente: tocar num livre marca e o contador mostra "1 horário selecionado"; tocar de novo desmarca; trocar de quadra e de dia mantém a seleção; tocar em em reserva, reservado, bloqueado ou indisponível não muda nada; não existe botão de avançar. Falha porque a seleção não existe.
   - Arquivos previstos: `apps/web/src/features/grade/pages/GradePage.vue`, `apps/web/src/features/grade/components/SlotItem.vue`, `apps/web/src/features/grade/components/SlotList.vue` e specs
 
-- [ ] **Tarefa 9 — Atualizar a grade a cada 15 segundos**
+- [x] **Tarefa 9 — Atualizar a grade a cada 15 segundos**
   - Cobre: CA9
   - Teste primeiro: componente com timers falsos: depois de 15 s o service é chamado de novo; um horário selecionado que voltou como `HELD` sai da seleção e o contador cai; o intervalo é limpo ao desmontar a página. Falha porque não há polling.
   - Arquivos previstos: `apps/web/src/features/grade/pages/GradePage.vue` e spec

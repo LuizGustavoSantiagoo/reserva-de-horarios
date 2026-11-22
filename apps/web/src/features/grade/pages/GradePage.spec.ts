@@ -54,8 +54,9 @@ async function mountAt(query: LocationQueryRaw = {}) {
 
 describe('GradePage', () => {
   beforeEach(() => {
-    // O aparelho está em outro dia: a página não pode usar o relógio dele.
-    vi.useFakeTimers({ toFake: ['Date'] })
+    // O aparelho está em outro dia: a página não pode usar o relógio dele. O intervalo do
+    // polling também é falso, para nenhum teste deixar um timer de verdade rodando.
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
     vi.setSystemTime(new Date('2030-01-01T12:00:00.000Z'))
     listCourtsMock.mockResolvedValue(COURTS)
     getSlotsMock.mockImplementation(async (courtId, date) => grid(courtId, date ?? '2026-11-22'))
@@ -375,6 +376,128 @@ describe('GradePage', () => {
       })
       expect(others).toHaveLength(0)
       expect(wrapper.text()).not.toMatch(/reservar|avançar|continuar/i)
+    })
+  })
+
+  describe('atualização a cada 15 segundos', () => {
+    const POLL_MS = 15_000
+
+    function counter(wrapper: Awaited<ReturnType<typeof mountAt>>['wrapper']) {
+      return wrapper.get('[data-test="selection-count"]').text()
+    }
+
+    // A grade de `grid()`, com o horário livre das 11h UTC já em reserva.
+    function heldGrid(courtId: string, date: string): SlotGrid {
+      const base = grid(courtId, date)
+      return {
+        ...base,
+        slots: base.slots.map((slot, i) => (i === 0 ? { ...slot, status: 'HELD' } : slot)),
+      }
+    }
+
+    it('depois de 15 s pede de novo a grade em exibição, sem voltar a mostrar "Carregando"', async () => {
+      const { wrapper } = await mountAt({ quadra: 'q2', dia: '2026-11-25' })
+      await flushPromises()
+      expect(getSlotsMock).toHaveBeenCalledTimes(1)
+
+      // A resposta da atualização demora: a grade antiga continua na tela.
+      getSlotsMock.mockReturnValueOnce(new Promise(() => {}))
+      vi.advanceTimersByTime(POLL_MS - 1)
+      expect(getSlotsMock).toHaveBeenCalledTimes(1)
+      vi.advanceTimersByTime(1)
+      await flushPromises()
+
+      expect(getSlotsMock).toHaveBeenCalledTimes(2)
+      expect(getSlotsMock).toHaveBeenLastCalledWith('q2', '2026-11-25')
+      expect(wrapper.text()).not.toContain('Carregando')
+      expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(2)
+    })
+
+    it('um horário selecionado que voltou como em reserva sai da seleção e o contador cai', async () => {
+      const { wrapper } = await mountAt()
+      await flushPromises()
+
+      await wrapper.get('[data-test="slot-toggle"]').trigger('click')
+      expect(counter(wrapper)).toBe('1 horário selecionado')
+
+      getSlotsMock.mockImplementation(async (courtId, date) =>
+        heldGrid(courtId, date ?? '2026-11-22'),
+      )
+      vi.advanceTimersByTime(POLL_MS)
+      await flushPromises()
+
+      expect(wrapper.find('[data-test="slot-toggle"]').exists()).toBe(false)
+      expect(wrapper.findAll('[data-test="slot"]')[0]?.text()).toContain('em reserva')
+      expect(counter(wrapper)).toBe('0 horários selecionados')
+    })
+
+    it('um horário selecionado em outra quadra é reconferido quando aquela grade volta à tela', async () => {
+      const { wrapper } = await mountAt()
+      await flushPromises()
+
+      await wrapper.get('[data-test="slot-toggle"]').trigger('click')
+      await wrapper.get('select').setValue('q2')
+      await flushPromises()
+      await wrapper.get('[data-test="slot-toggle"]').trigger('click')
+      expect(counter(wrapper)).toBe('2 horários selecionados')
+
+      // Enquanto a quadra 2 está na tela, o horário escolhido na quadra 1 foi pré-reservado.
+      getSlotsMock.mockImplementation(async (courtId, date) =>
+        courtId === 'q1'
+          ? heldGrid(courtId, date ?? '2026-11-22')
+          : grid(courtId, date ?? '2026-11-22'),
+      )
+      vi.advanceTimersByTime(POLL_MS)
+      await flushPromises()
+      // A atualização só pediu a quadra 2, que continua livre: nada sai da seleção.
+      expect(getSlotsMock).toHaveBeenLastCalledWith('q2', '2026-11-22')
+      expect(counter(wrapper)).toBe('2 horários selecionados')
+
+      await wrapper.get('select').setValue('q1')
+      await flushPromises()
+
+      expect(counter(wrapper)).toBe('1 horário selecionado')
+    })
+
+    it('a resposta de uma atualização que chega depois da troca de quadra não substitui a grade nova', async () => {
+      const { wrapper } = await mountAt()
+      await flushPromises()
+
+      let answerPoll: (value: SlotGrid) => void = () => {}
+      getSlotsMock.mockReturnValueOnce(new Promise((resolve) => (answerPoll = resolve)))
+      vi.advanceTimersByTime(POLL_MS)
+      await wrapper.get('select').setValue('q2')
+      await flushPromises()
+
+      answerPoll(grid('q1', '2026-11-22'))
+      await flushPromises()
+
+      expect(wrapper.get('[data-test="grid-heading"]').text()).toContain('Quadra 2')
+    })
+
+    it('uma atualização que falha não interrompe as seguintes', async () => {
+      const { wrapper } = await mountAt()
+      await flushPromises()
+
+      getSlotsMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      vi.advanceTimersByTime(POLL_MS)
+      await flushPromises()
+      vi.advanceTimersByTime(POLL_MS)
+      await flushPromises()
+
+      expect(getSlotsMock).toHaveBeenCalledTimes(3)
+      expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(2)
+    })
+
+    it('desmontar a página limpa o intervalo', async () => {
+      const { wrapper } = await mountAt()
+      await flushPromises()
+
+      wrapper.unmount()
+      vi.advanceTimersByTime(POLL_MS * 2)
+      await flushPromises()
+
+      expect(getSlotsMock).toHaveBeenCalledTimes(1)
     })
   })
 })
