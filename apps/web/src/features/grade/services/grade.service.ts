@@ -8,7 +8,7 @@ export interface Court {
   name: string
 }
 
-export type SlotStatus = 'FREE' | 'HELD' | 'RESERVED' | 'BLOCKED'
+export type SlotStatus = 'FREE' | 'HELD' | 'RESERVED' | 'BLOCKED' | 'UNAVAILABLE'
 
 export interface Slot {
   startsAt: string

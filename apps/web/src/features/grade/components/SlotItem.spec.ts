@@ -64,4 +64,21 @@ describe('SlotItem', () => {
     const label = wrapper.get('[data-test="slot-status"]').text()
     expect(label).toBe('em reserva')
   })
+
+  it('mostra "indisponível" no horário que já começou, no estilo desabilitado e sem o selo de livre', () => {
+    const wrapper = mount(SlotItem, {
+      props: {
+        item: {
+          startsAt: '2026-11-22T15:00:00.000Z',
+          endsAt: '2026-11-22T16:00:00.000Z',
+          status: 'UNAVAILABLE',
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('12:00')
+    expect(wrapper.get('[data-test="slot-status"]').text()).toBe('indisponível')
+    expect(wrapper.get('[data-test="slot"]').classes()).toContain('bg-desabilitado')
+    expect(wrapper.find('.bg-sucesso').exists()).toBe(false)
+  })
 })

@@ -198,6 +198,28 @@ describe('grade pública (e2e)', () => {
       });
     });
 
+    it('às 9h de São Paulo, o horário livre que já começou fica indisponível e o bloqueado que começa agora continua bloqueado', async () => {
+      now = new Date('2030-06-02T12:00:00.000Z');
+
+      const response = await request(app.getHttpServer())
+        .get(`/courts/${courtId}/slots`)
+        .expect(200);
+
+      const slots = (
+        response.body as {
+          data: { slots: { startsAt: string; status: string }[] };
+        }
+      ).data.slots;
+      expect(
+        slots.map(({ startsAt, status }) => ({ startsAt, status })),
+      ).toEqual([
+        { startsAt: '2030-06-02T11:00:00.000Z', status: 'UNAVAILABLE' },
+        { startsAt: '2030-06-02T12:00:00.000Z', status: 'BLOCKED' },
+        { startsAt: '2030-06-02T21:00:00.000Z', status: 'FREE' },
+        { startsAt: '2030-06-02T22:00:00.000Z', status: 'FREE' },
+      ]);
+    });
+
     describe('com reservas', () => {
       // Prazo já vencido segundo o CLOCK (5h de São Paulo, antes das 6h do `now`).
       const EXPIRED_DEADLINE = new Date('2030-06-02T08:00:00.000Z');
@@ -297,6 +319,40 @@ describe('grade pública (e2e)', () => {
         ]);
         // `firstName` só existe no horário reservado.
         expect(slots.filter((slot) => 'firstName' in slot)).toHaveLength(1);
+      });
+
+      it('às 11h de São Paulo, o que já começou livre ou em reserva fica indisponível e o reservado continua com o primeiro nome', async () => {
+        now = at(11);
+
+        const response = await request(app.getHttpServer())
+          .get(`/courts/${reservedCourt}/slots`)
+          .expect(200);
+
+        const slots = (
+          response.body as {
+            data: { slots: Record<string, unknown>[] };
+          }
+        ).data.slots;
+        expect(
+          slots.map(({ startsAt, status, firstName }) => ({
+            startsAt,
+            status,
+            firstName,
+          })),
+        ).toEqual([
+          {
+            startsAt: at(8).toISOString(),
+            status: 'RESERVED',
+            firstName: 'Maria',
+          },
+          // 9h HELD e 10h PENDING já começaram.
+          { startsAt: at(9).toISOString(), status: 'UNAVAILABLE' },
+          { startsAt: at(10).toISOString(), status: 'UNAVAILABLE' },
+          // 11h (expirada, ou seja, livre) começa exatamente agora.
+          { startsAt: at(11).toISOString(), status: 'UNAVAILABLE' },
+          { startsAt: at(12).toISOString(), status: 'FREE' },
+          { startsAt: at(13).toISOString(), status: 'HELD' },
+        ]);
       });
 
       it('a resposta pública nunca contém telefone, nome completo nem o nome de quem não confirmou', async () => {

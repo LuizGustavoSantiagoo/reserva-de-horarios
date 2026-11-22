@@ -9,16 +9,18 @@ const LABELS: Record<SlotStatus, string> = {
   HELD: 'em reserva',
   RESERVED: 'reservado',
   BLOCKED: 'bloqueado',
+  UNAVAILABLE: 'indisponível',
 }
 
-// Ocupado, em reserva ou bloqueado: card esmaecido no tom `desabilitado` (design-tokens).
-const UNAVAILABLE_STYLE = 'border-desabilitado bg-desabilitado text-texto-suave'
+// Em reserva, reservado, bloqueado ou já começado: card esmaecido no tom `desabilitado` (design-tokens).
+const DISABLED_STYLE = 'border-desabilitado bg-desabilitado text-texto-suave'
 
 const STYLES: Record<SlotStatus, string> = {
   FREE: 'border-desabilitado bg-superficie text-texto',
-  HELD: UNAVAILABLE_STYLE,
-  RESERVED: UNAVAILABLE_STYLE,
-  BLOCKED: UNAVAILABLE_STYLE,
+  HELD: DISABLED_STYLE,
+  RESERVED: DISABLED_STYLE,
+  BLOCKED: DISABLED_STYLE,
+  UNAVAILABLE: DISABLED_STYLE,
 }
 
 // O horário é o da arena, não o do aparelho.

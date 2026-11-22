@@ -111,7 +111,7 @@ sobrescrito no `TestingModule`.
   - Teste primeiro: unitários de `first-name.ts` (`"  maria  da Silva "` → `"Maria"`, `"JOÃO"` → `"João"`) e de `slot-status.ts` (confirmada → `RESERVED`; `HELD` ou `PENDING` → `HELD`, inclusive com `holdExpiresAt` já vencido; `EXPIRED` ou `CANCELLED` → `FREE`); e2e verificando que o corpo de `GET /courts/:id/slots` não contém o telefone nem o sobrenome; componente mostrando "reservado · Maria" e "em reserva" sem nome. Falham porque a função ainda ignora reservas.
   - Arquivos previstos: `apps/api/src/slots/first-name.ts`, `apps/api/src/slots/slot-status.ts`, `apps/api/src/slots/slots.service.ts`, `apps/api/src/slots/dto/`, `apps/api/test/slots.e2e-spec.ts`, `apps/web/src/features/grade/components/SlotItem.vue` e spec
 
-- [ ] **Tarefa 5 — Marcar como indisponível o horário que já começou**
+- [x] **Tarefa 5 — Marcar como indisponível o horário que já começou**
   - Cobre: CA5
   - Teste primeiro: unitário de `slot-status.ts` com relógio fixo: início igual ou anterior ao `now`, livre ou em reserva → `UNAVAILABLE`; reservado ou bloqueado mantém a situação; e2e com o `CLOCK` sobrescrito; componente mostrando "indisponível". Falham porque a função não olha o relógio.
   - Arquivos previstos: `apps/api/src/slots/slot-status.ts`, `apps/api/test/slots.e2e-spec.ts`, `apps/web/src/features/grade/components/SlotItem.vue` e spec

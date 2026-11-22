@@ -35,7 +35,8 @@ export class SlotsService {
 
   /** A grade da quadra no dia pedido; sem dia, a de hoje em São Paulo. */
   async findGrid(courtId: string, date?: string): Promise<SlotGridDto> {
-    const today = saoPauloDate(this.clock.now());
+    const now = this.clock.now();
+    const today = saoPauloDate(now);
     const day = date ?? today;
 
     const court = await this.courts.findActive(courtId);
@@ -73,10 +74,14 @@ export class SlotsService {
         const slot: SlotDto = {
           startsAt: startsAt.toISOString(),
           endsAt: new Date(startsAt.getTime() + HOUR_MS).toISOString(),
-          status: slotStatus({
-            blocked: blocked.has(startsAt.getTime()),
-            reservationStatus: reservation?.status,
-          }),
+          status: slotStatus(
+            {
+              startsAt,
+              blocked: blocked.has(startsAt.getTime()),
+              reservationStatus: reservation?.status,
+            },
+            now,
+          ),
         };
         // Só o horário reservado mostra quem reservou, e só o primeiro nome (CA4).
         if (slot.status === 'RESERVED' && reservation?.customerName) {
