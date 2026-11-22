@@ -1,7 +1,7 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.9.0
+**Versão:** 1.10.0
 **Última atualização:** 2026-11-22
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
@@ -291,7 +291,7 @@ tudo daquele domínio junto. É essa pasta que o Mapa de Domínios (§6) aponta.
     │   │   ├── config/            # ConfigModule e validação das variáveis
     │   │   ├── prisma/            # PrismaService (módulo global)
     │   │   ├── auth/              # login do administrador e emissão do JWT
-│   │   ├── users/             # usuários do painel (ADMIN e OPERATOR) e perfil de quem está logado
+    │   │   ├── users/             # usuários do painel (ADMIN e OPERATOR) e perfil de quem está logado
     │   │   ├── arena/             # dados da arena única
     │   │   ├── courts/            # quadras
     │   │   ├── schedules/         # agenda semanal (ScheduleRule)
@@ -310,7 +310,7 @@ tudo daquele domínio junto. É essa pasta que o Mapa de Domínios (§6) aponta.
         │   │   ├── reserva/       # revisão, dados e pré-reserva
         │   │   ├── pagamento/     # Pix, espera e confirmação
         │   │   ├── cancelamento/  # cancelar com código
-        │   │   └── admin/         # login, agenda do dia, arena e quadras, agenda semanal
+        │   │   └── admin/         # login, agenda do dia, arena e quadras, agenda semanal; session-expired.ts na raiz
         │   ├── shared/            # componentes base (botão, campo, aviso) e composables comuns
         │   └── assets/            # main.css com @import "tailwindcss" e o @theme dos tokens
         └── e2e/                   # testes Playwright
@@ -320,6 +320,10 @@ Dentro de cada pasta de `features/`, a mesma forma: `pages/` (componentes de
 rota), `components/` (peças do domínio) e `services/` (o acesso à API daquele
 domínio). Pastas de código em inglês; as de `features/` seguem o nome da tela,
 porque espelham a interface, que é em português.
+
+Exceção: `features/admin/session-expired.ts` fica na raiz do domínio, fora das três
+pastas. Não é página, componente nem service: é o callback de sessão expirada que o
+`main.ts` registra no cliente HTTP (`onSessionExpired`) e que leva ao login pelo router.
 
 ---
 
@@ -341,12 +345,16 @@ porque espelham a interface, que é em português.
   - `shared/` não importa de `features/`.
 - **Token JWT (ID16).** O token do administrador fica em um composable de sessão
   (`useSession`, em `shared/composables/`), em memória com cópia em `sessionStorage`:
-  some ao fechar a aba. O cliente HTTP (`src/api/client.ts`) anexa `Authorization:
+  some ao fechar a aba. O mesmo composable guarda o perfil de quem entrou (`id`,
+  `email`, `role`, de `GET /users/me`) **só em memória**: recarregar a página busca de
+  novo, e trocar o token ou sair o descarta. O cliente HTTP (`src/api/client.ts`) anexa `Authorization:
   Bearer` a toda chamada, quando há token guardado — e só ele monta esse cabeçalho;
   sem token, o cabeçalho não vai. Resposta **401** limpa a sessão e leva ao login,
   exceto na chamada que pede `{ sessionExpiry: false }` (o login, onde `401` é senha
   errada). As rotas `admin/` têm *navigation guard*
-  no Vue Router — conforto de UX; quem protege de verdade é o Guard da API.
+  no Vue Router: sem token leva ao login, e a rota com `meta.roles` barra quem não tem
+  o papel (lê o perfil da sessão ou o busca) — conforto de UX; quem protege de verdade
+  é o Guard da API.
 - **Assíncrono com estado visível.** Toda tela que busca dados trata os três
   estados: carregando, erro (com a mensagem do formato padrão da API) e vazio.
 - **Tempo real sem WebSocket.** A espera da confirmação do pagamento e a grade
@@ -511,7 +519,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 
 | Domínio | Módulo (pasta) | Guard | Dados (repository) | US |
 | :------ | :------------- | :---- | :----------------- | :-- |
-| | | | | |
+| Autenticação e usuários do painel | `apps/api/src/auth/`, `apps/api/src/users/` e `apps/api/src/common/auth/` + `apps/web/src/features/admin/` | `AuthGuard` + `RolesGuard` globais; `@Public()` no login; `@Roles('ADMIN')` em `POST /users` e `GET /users` | `AdminUser` via `PrismaService` no `UsersService` | US06 |
 
 ---
 
@@ -530,6 +538,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | 2026-11-22 | 1.7.0 | Tarefa 3 da US06 (#7): `@ApiBearerAuth()` nos controllers protegidos, e não só nos administrativos, e Swagger montado por `setupSwagger` em `src/common/swagger.ts` (§2.2); pasta `users/` na API, `APP_GUARD` no `app.module.ts`, `common/auth/` e o comentário do `main.ts` na árvore (§3) |
 | 2026-11-22 | 1.8.0 | Tarefa 4 da US06 (#7): `RolesGuard` global (segundo `APP_GUARD`) com `@Roles(...)` recebendo a lista de papéis, e não só `'ADMIN'`; 403 antes da validação do corpo (§2.1, item 6) |
 | 2026-11-22 | 1.9.0 | Tarefa 7 da US06 (#7): o cliente HTTP anexa o Bearer a toda chamada quando há token guardado, e não só às administrativas; `useSession` mora em `shared/composables/`; `401` com `{ sessionExpiry: false }` (login) não limpa a sessão (§4) |
+| 2026-11-22 | 1.10.0 | Fechamento da US06 (#7): indentação da pasta `users/` e `features/admin/session-expired.ts` como exceção à forma de `features/` (§3); `useSession` guarda também o perfil, só em memória, e o guard do painel barra por papel via `meta.roles` (§4); linha de autenticação e usuários no Mapa de Domínios (§6) |
 
 ---
 

@@ -86,6 +86,22 @@ describe('LoginPage', () => {
     expect(router.currentRoute.value.name).toBe('admin-login')
   })
 
+  it('na recusa, cada campo aponta pelo aria-describedby para o id da mensagem, que não é derivado do id do e-mail', async () => {
+    loginMock.mockRejectedValue(new LoginError('E-mail ou senha inválidos.'))
+    const { wrapper } = await mountAt('/admin/login')
+
+    await fillAndSubmit(wrapper)
+    await flushPromises()
+
+    const errorId = wrapper.get('[role="alert"]').attributes('id')
+    const email = wrapper.get('input[type="email"]')
+    const password = wrapper.get('input[type="password"]')
+    expect(errorId).toBeTruthy()
+    expect(email.attributes('aria-describedby')).toBe(errorId)
+    expect(password.attributes('aria-describedby')).toBe(errorId)
+    expect(errorId).not.toBe(`${email.attributes('id')}-erro`)
+  })
+
   it('sem resposta da API, mostra que não foi possível conectar', async () => {
     loginMock.mockRejectedValue(new LoginError('Não foi possível conectar ao servidor.'))
     const { wrapper, router } = await mountAt('/admin/login')

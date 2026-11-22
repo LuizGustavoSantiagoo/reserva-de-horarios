@@ -1,7 +1,7 @@
 # 📄 Product Requirements Document (PRD)
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.5.0
+**Versão:** 1.6.0
 **Última atualização:** 2026-11-22
 
 > 🤖 **Este documento é a fonte da verdade sobre o QUE o produto faz.** Regra de
@@ -170,7 +170,7 @@ que** o horário não fique preso por quem desistiu.
 
 ---
 
-### US06 — Entrar no painel como administrador ou operador · `Must Have` · `S` · Status: `🟡 Ready`
+### US06 — Entrar no painel como administrador ou operador · `Must Have` · `S` · Status: `🟢 Live`
 
 **Como** administrador ou operador, **eu quero** entrar no painel com e-mail e senha
 **para que** só quem trabalha na arena chegue ao painel, e cada um alcance só o que o
@@ -352,3 +352,4 @@ imprevisto de quem pediu cancelamento por fora.
 | 2026-09-26 | 1.3.0 | Revisão das Issues: **compra** de vários horários com um Pix e um código, cancelamento parcial (RN22, US02–US05); quadra pode ser **inativada** (US07, RN14); horário fixo de **1 hora** (RN23, US08); agenda do dia mostra só os reservados (US09); aviso de tempo esgotado na tela de pagamento (US04) |
 | 2026-10-12 | 1.4.0 | Revisão da Entrega 1: botão **Conferir pagamento** na tela de espera, que consulta o provedor quando o aviso demora — a confirmação passa a vir do aviso autenticado **ou** da consulta do sistema ao provedor (RN02, US03) |
 | 2026-11-22 | 1.5.0 | Spec da US06 (#7): novo ator **Operador** (funcionário da arena, conta criada pelo administrador, sem poder de administração) no glossário e nos atores; autenticação passa a ser do **painel**, não só do administrador; US06 cobre administrador e operador, com cadastro de operador, recusa por papel e limite de tentativas no login (RN24) |
+| 2026-11-22 | 1.6.0 | Fechamento da US06 (#7): story em `🟢 Live` |

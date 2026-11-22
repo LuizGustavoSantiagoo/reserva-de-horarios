@@ -379,7 +379,7 @@ linha no Histórico e versão nova a cada um):
     (`createOperator`), `apps/web/src/router/index.ts`, `apps/web/src/router/guards.ts`
     e spec
 
-- [ ] **Tarefa 11 — Fechar a história: pendências do auditor final**
+- [x] **Tarefa 11 — Fechar a história: pendências do auditor final**
   - Cobre: CA15 (o aviso de erro do painel não fica preso quando o perfil chega por
     outro caminho), CA13 (cada campo da tela de login ligado à mensagem de erro pelo
     próprio id) e as pendências de documentação da auditoria final

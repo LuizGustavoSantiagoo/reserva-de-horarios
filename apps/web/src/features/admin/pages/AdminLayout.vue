@@ -19,9 +19,11 @@ const errorMessage = ref<string>()
 
 // Falha de rede ou do servidor não é sessão vencida: mostra o erro e mantém o token (CA15).
 // O `401` o client já tratou, limpando a sessão e levando ao login (CA14).
+// Limpa o erro antes do retorno antecipado: se o guard gravou o perfil enquanto o aviso
+// estava na tela, Tentar de novo só precisa apagar o aviso e mostrar o painel.
 async function loadProfile(): Promise<void> {
-  if (session.profile.value) return
   errorMessage.value = undefined
+  if (session.profile.value) return
   try {
     session.setProfile(await getMe())
   } catch (error) {

@@ -140,6 +140,21 @@ describe('AdminLayout', () => {
     expect(useSession().profile.value).toEqual(ADMIN)
   })
 
+  it('com o aviso na tela, se o guard grava o perfil na sessão, Tentar de novo apaga o aviso e mostra o painel', async () => {
+    getMeMock.mockRejectedValue(new ProfileError('Não foi possível conectar ao servidor.'))
+    const { wrapper } = await mountLayout()
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+
+    // O guard buscou o perfil por outro caminho (ex.: navegar para uma rota filha).
+    useSession().setProfile(ADMIN)
+    await findButton(wrapper, 'Tentar de novo')?.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('ana@arena.com')
+    expect(wrapper.text()).not.toContain('Carregando o painel…')
+  })
+
   it('com o perfil já na sessão (o guard buscou), mostra-o sem chamar o getMe de novo', async () => {
     useSession().setProfile(ADMIN)
 

@@ -10,6 +10,7 @@ const session = useSession()
 
 const emailId = useId()
 const passwordId = useId()
+const errorId = useId()
 
 const email = ref('')
 const password = ref('')
@@ -63,7 +64,7 @@ async function submit(): Promise<void> {
           v-model="email"
           type="email"
           autocomplete="username"
-          :aria-describedby="errorMessage ? `${emailId}-erro` : undefined"
+          :aria-describedby="errorMessage ? errorId : undefined"
           class="h-11 w-full rounded-lg border border-desabilitado bg-superficie px-md text-corpo text-texto focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primaria-escura"
         />
       </div>
@@ -74,11 +75,11 @@ async function submit(): Promise<void> {
           v-model="password"
           type="password"
           autocomplete="current-password"
-          :aria-describedby="errorMessage ? `${emailId}-erro` : undefined"
+          :aria-describedby="errorMessage ? errorId : undefined"
           class="h-11 w-full rounded-lg border border-desabilitado bg-superficie px-md text-corpo text-texto focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primaria-escura"
         />
       </div>
-      <p v-if="errorMessage" :id="`${emailId}-erro`" role="alert" class="text-legenda text-perigo">
+      <p v-if="errorMessage" :id="errorId" role="alert" class="text-legenda text-perigo">
         {{ errorMessage }}
       </p>
       <!-- Estado "carregando" dos tokens: fundo normal, indicador, rótulo da ação, inerte. -->
