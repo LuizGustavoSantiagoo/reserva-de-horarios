@@ -342,4 +342,189 @@ describe('rotas de usuário (e2e)', () => {
       await expectUserCount(2);
     });
   });
+
+  /** Chama uma rota GET com o token do usuário, ou sem token. */
+  function getAs(path: string, user?: TestUser) {
+    const call = request(app.getHttpServer()).get(path);
+    return user
+      ? call.set('Authorization', `Bearer ${tokenFor(app, user)}`)
+      : call;
+  }
+
+  /**
+   * O 403 do CA10, no formato único de erro e sem dado de usuário. O `path` ecoa a
+   * URL pedida (que pode levar um id), por isso só os e-mails são procurados no corpo.
+   */
+  function expectForbiddenWithoutUserData(
+    body: Record<string, unknown>,
+    path: string,
+  ) {
+    expect(withoutTimestamp(body)).toEqual({
+      statusCode: 403,
+      error: 'Forbidden',
+      message: FORBIDDEN_MESSAGE,
+      path,
+    });
+    const text = JSON.stringify(body);
+    for (const user of [admin, operator]) {
+      expect(text).not.toContain(user.email);
+    }
+  }
+
+  describe('GET /users', () => {
+    it('ADMIN recebe 200 com todos os usuários, ordenados por e-mail, só com id, email e role', async () => {
+      // Gravado fora da ordem alfabética: a ordem da resposta vem do e-mail.
+      const aaron = await createUser(prisma, {
+        email: 'aaron@arena.com',
+        password: PASSWORD,
+        role: 'OPERATOR',
+      });
+
+      const response = await getAs('/users', admin).expect(200);
+
+      const body = response.body as { data: Record<string, unknown>[] };
+      expect(body).toEqual({
+        data: [
+          { id: aaron.id, email: 'aaron@arena.com', role: 'OPERATOR' },
+          { id: admin.id, email: 'ana@arena.com', role: 'ADMIN' },
+          { id: operator.id, email: 'bruno@arena.com', role: 'OPERATOR' },
+        ],
+      });
+      for (const user of body.data) {
+        expect(Object.keys(user).sort()).toEqual(['email', 'id', 'role']);
+      }
+      await expectNoSecrets(response.body);
+    });
+
+    it('OPERATOR recebe 403 com a mensagem do CA10, sem dado de nenhum usuário', async () => {
+      const response = await getAs('/users', operator).expect(403);
+
+      expectForbiddenWithoutUserData(
+        response.body as Record<string, unknown>,
+        '/users',
+      );
+      const text = JSON.stringify(response.body);
+      for (const user of [admin, operator]) {
+        expect(text).not.toContain(user.email);
+        expect(text).not.toContain(user.id);
+      }
+    });
+
+    it('sem token responde 401 "Autenticação necessária."', async () => {
+      const response = await getAs('/users').expect(401);
+
+      expect(
+        withoutTimestamp(response.body as Record<string, unknown>),
+      ).toEqual({
+        statusCode: 401,
+        error: 'Unauthorized',
+        message: AUTHENTICATION_REQUIRED,
+        path: '/users',
+      });
+    });
+  });
+
+  describe('GET /users/:id', () => {
+    // UUID bem formado que não pertence a nenhum usuário.
+    const MISSING_ID = '00000000-0000-4000-8000-000000000000';
+
+    describe('ADMIN', () => {
+      it.each([
+        { caso: 'outro usuário', user: () => operator },
+        { caso: 'o próprio', user: () => admin },
+      ])(
+        'recebe 200 com { data: { id, email, role } } de $caso, e nada além',
+        async ({ user }) => {
+          const { id, email, role } = user();
+
+          const response = await getAs(`/users/${id}`, admin).expect(200);
+
+          expect(response.body).toEqual({ data: { id, email, role } });
+          await expectNoSecrets(response.body);
+        },
+      );
+
+      it('com id que não existe recebe 404 "Usuário não encontrado."', async () => {
+        const response = await getAs(`/users/${MISSING_ID}`, admin).expect(404);
+
+        expect(
+          withoutTimestamp(response.body as Record<string, unknown>),
+        ).toEqual({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Usuário não encontrado.',
+          path: `/users/${MISSING_ID}`,
+        });
+      });
+    });
+
+    describe('OPERATOR', () => {
+      it('recebe 200 com os próprios dados', async () => {
+        const { id, email, role } = operator;
+
+        const response = await getAs(`/users/${id}`, operator).expect(200);
+
+        expect(response.body).toEqual({ data: { id, email, role } });
+        await expectNoSecrets(response.body);
+      });
+
+      it('com id de outra pessoa e com id inexistente recebe 403, com corpos iguais fora o timestamp', async () => {
+        const other = await getAs(`/users/${admin.id}`, operator).expect(403);
+        const missing = await getAs(`/users/${MISSING_ID}`, operator).expect(
+          403,
+        );
+
+        const otherBody = other.body as Record<string, unknown>;
+        const missingBody = missing.body as Record<string, unknown>;
+        expectForbiddenWithoutUserData(otherBody, `/users/${admin.id}`);
+        expectForbiddenWithoutUserData(missingBody, `/users/${MISSING_ID}`);
+        // O path ecoa a URL pedida; fora ele e o timestamp, nada distingue os dois.
+        const { path: _otherPath, ...otherRest } = withoutTimestamp(otherBody);
+        const { path: _missingPath, ...missingRest } =
+          withoutTimestamp(missingBody);
+        expect(otherRest).toEqual(missingRest);
+      });
+    });
+
+    it.each([
+      { papel: 'ADMIN', user: () => admin },
+      { papel: 'OPERATOR', user: () => operator },
+    ])(
+      '$papel com id que não é UUID recebe 400 com fields.id',
+      async ({ user }) => {
+        const response = await getAs('/users/nao-e-uuid', user()).expect(400);
+
+        const error = response.body as {
+          fields?: Record<string, string[]>;
+        } & Record<string, unknown>;
+        expect(withoutTimestamp(error)).toMatchObject({
+          statusCode: 400,
+          error: 'Bad Request',
+          path: '/users/nao-e-uuid',
+        });
+        expect(Object.keys(error.fields ?? {})).toEqual(['id']);
+      },
+    );
+
+    it('sem token responde 401 "Autenticação necessária."', async () => {
+      const response = await getAs(`/users/${operator.id}`).expect(401);
+
+      expect(
+        withoutTimestamp(response.body as Record<string, unknown>),
+      ).toEqual({
+        statusCode: 401,
+        error: 'Unauthorized',
+        message: AUTHENTICATION_REQUIRED,
+        path: `/users/${operator.id}`,
+      });
+    });
+
+    it('GET /users/me continua respondendo o perfil, e não cai na validação de UUID', async () => {
+      const { id, email, role } = operator;
+
+      const response = await getAs('/users/me', operator).expect(200);
+
+      expect(response.body).toEqual({ data: { id, email, role } });
+    });
+  });
 });

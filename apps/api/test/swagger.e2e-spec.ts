@@ -63,6 +63,24 @@ describe('/docs-json (e2e)', () => {
     );
   });
 
+  it('GET /users exige o Bearer e documenta 200, 401 e 403', () => {
+    const operation = document.paths['/users']?.get;
+
+    expect(operation?.security).toEqual([{ bearer: [] }]);
+    expect(Object.keys(operation?.responses ?? {})).toEqual(
+      expect.arrayContaining(['200', '401', '403']),
+    );
+  });
+
+  it('GET /users/{id} exige o Bearer e documenta 200, 400, 401, 403 e 404', () => {
+    const operation = document.paths['/users/{id}']?.get;
+
+    expect(operation?.security).toEqual([{ bearer: [] }]);
+    expect(Object.keys(operation?.responses ?? {})).toEqual(
+      expect.arrayContaining(['200', '400', '401', '403', '404']),
+    );
+  });
+
   it.each([
     { rota: 'GET /', path: '/', method: 'get' },
     { rota: 'GET /courts', path: '/courts', method: 'get' },

@@ -295,7 +295,7 @@ linha no Histórico e versão nova a cada um):
     `apps/api/test/users.e2e-spec.ts`, `apps/api/test/swagger.e2e-spec.ts`,
     `docs/architecture.md` (§2.1 item 6, Histórico)
 
-- [ ] **Tarefa 5 — Listar e consultar usuários com a regra de dono**
+- [x] **Tarefa 5 — Listar e consultar usuários com a regra de dono**
   - Cobre: CA9, CA11, CA10 (em `GET /users`)
   - Teste primeiro: e2e: `ADMIN` em `GET /users` → todos, ordenados por e-mail, só com
     `id`, `email`, `role`; `OPERATOR` → `403` sem dado de usuário. `GET /users/:id`:
