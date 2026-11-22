@@ -6,7 +6,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
-import { createUser } from './helpers/auth.js';
+import { createUser, tokenFor } from './helpers/auth.js';
 import type { TestUser } from './helpers/auth.js';
 import { resetDatabase } from './helpers/db.js';
 import { withoutTimestamp } from './helpers/error-body.js';
@@ -209,6 +209,78 @@ describe('POST /auth/login (e2e)', () => {
 
       const body = response.body as { fields: Record<string, string[]> };
       expect(Object.keys(body.fields)).toEqual(['password']);
+    });
+  });
+
+  // Date falso: o contador do limite usa Date.now(), e os 10 minutos passam sem espera.
+  describe('com 5 tentativas de login já feitas pela mesma origem', () => {
+    const TEN_MINUTES = 10 * 60 * 1000;
+    const TOO_MANY_ATTEMPTS =
+      'Muitas tentativas de login. Tente de novo em alguns minutos.';
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /** As 5 tentativas da janela, certas e erradas, inclusive com corpo inválido. */
+    async function spendAttempts(): Promise<void> {
+      await login({ email: admin.email, password: PASSWORD }).expect(200);
+      await login({ email: admin.email, password: 'senha-errada-123' }).expect(
+        401,
+      );
+      await login({ email: 'ninguem@arena.com', password: PASSWORD }).expect(
+        401,
+      );
+      await login({ email: 'nao-e-um-email', password: '' }).expect(400);
+      await login({ email: operator.email, password: PASSWORD }).expect(200);
+    }
+
+    it('a 6ª, mesmo com a senha certa, dá 429 sem token; passados 10 minutos, volta a dar 200', async () => {
+      await spendAttempts();
+
+      const blocked = await login({
+        email: admin.email,
+        password: PASSWORD,
+      }).expect(429);
+
+      const body = blocked.body as Record<string, unknown>;
+      expect(withoutTimestamp(body)).toEqual({
+        statusCode: 429,
+        error: 'Too Many Requests',
+        message: TOO_MANY_ATTEMPTS,
+        path: '/auth/login',
+      });
+      expect(JSON.stringify(body)).not.toContain('accessToken');
+      await expectNoSecrets(body);
+
+      vi.advanceTimersByTime(TEN_MINUTES);
+
+      const again = await login({
+        email: admin.email,
+        password: PASSWORD,
+      }).expect(200);
+      const payload = tokenPayload(
+        again.body as { data: { accessToken: string } },
+      );
+      expect(payload.sub).toBe(admin.id);
+    });
+
+    it('o limite vale só para o login: GET /courts e GET /users/me seguem dando 200', async () => {
+      await spendAttempts();
+      await login({ email: admin.email, password: PASSWORD }).expect(429);
+
+      await request(app.getHttpServer()).get('/courts').expect(200);
+      for (let i = 0; i < 6; i++) {
+        const me = await request(app.getHttpServer())
+          .get('/users/me')
+          .set('Authorization', `Bearer ${tokenFor(app, operator)}`)
+          .expect(200);
+        expect((me.body as { data: { id: string } }).data.id).toBe(operator.id);
+      }
     });
   });
 });

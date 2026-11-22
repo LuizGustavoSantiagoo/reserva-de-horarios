@@ -309,7 +309,7 @@ linha no Histórico e versão nova a cada um):
     `dto/user-id-param.dto.ts`), `apps/api/test/users.e2e-spec.ts`,
     `apps/api/test/swagger.e2e-spec.ts`
 
-- [ ] **Tarefa 6 — Limitar as tentativas de login**
+- [x] **Tarefa 6 — Limitar as tentativas de login**
   - Cobre: CA4
   - Teste primeiro: e2e (uma app por teste, `Date` falso): 5 logins, certos ou errados, e
     o 6º com a senha certa → `429` "Muitas tentativas de login. Tente de novo em alguns

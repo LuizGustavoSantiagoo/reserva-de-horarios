@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { ThrottlerModule } from '@nestjs/throttler';
 import type { Env } from '../config/env.validation.js';
 import { UsersModule } from '../users/users.module.js';
 import { AuthController } from './auth.controller.js';
@@ -21,6 +22,12 @@ import { AuthService } from './auth.service.js';
         },
         verifyOptions: { algorithms: ['HS256'] },
       }),
+    }),
+    // Limite do login (CA4): só a rota de login usa o ThrottlerGuard; não é APP_GUARD.
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: 'login', ttl: 600_000, limit: 5 }],
+      errorMessage:
+        'Muitas tentativas de login. Tente de novo em alguns minutos.',
     }),
   ],
   controllers: [AuthController],
