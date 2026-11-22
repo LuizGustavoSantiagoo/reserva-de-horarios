@@ -18,6 +18,12 @@ const refusal = ref<GradeRefusal>()
 // Horários marcados (CA8), com chave `courtId|startsAt`: valem para qualquer quadra e dia,
 // por isso a seleção sobrevive à troca de quadra ou de dia.
 const selection = ref(new Set<string>())
+// Falha de rede ou do servidor quando não há grade a mostrar (CA10): a tela mostra o erro e
+// "Tentar de novo". Guarda a mensagem do formato padrão da API.
+const loadError = ref<string>()
+// Falha com a grade na tela (atualização automática ou troca de quadra/dia): a grade e a
+// seleção ficam, com o aviso "Não foi possível atualizar." até a próxima carga que der certo.
+const refreshFailed = ref(false)
 
 // A quadra e o dia moram na query (`?quadra=<id>&dia=YYYY-MM-DD`): o link abre a mesma grade,
 // e trocar de quadra ou de dia só troca a query, sem montar a página de novo.
@@ -92,23 +98,60 @@ function showGrid(loaded: SlotGrid): void {
   }
 }
 
+const FALLBACK_ERROR_MESSAGE = 'Não foi possível carregar a grade.'
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error && error.message ? error.message : FALLBACK_ERROR_MESSAGE
+}
+
+// Falha de rede ou do servidor (CA10). Com a grade na tela, ela fica — e a quadra escolhida
+// volta a ser a dela — com o aviso; sem grade, a tela mostra o erro com "Tentar de novo".
+function showFailure(error: unknown): void {
+  if (grid.value) {
+    courtId.value = grid.value.courtId
+    refreshFailed.value = true
+    return
+  }
+  refusal.value = undefined
+  loadError.value = errorMessage(error)
+}
+
 // Sem dia escolhido, a grade é pedida sem `date`: o "hoje" é sempre o do servidor.
+// Nunca rejeita: a recusa do link e a falha de rede viram estado da tela.
 async function loadGrid(day?: string): Promise<void> {
   if (!courtId.value) return
   try {
     const loaded = await getSlots(courtId.value, day)
     showGrid(loaded)
     refusal.value = undefined
+    loadError.value = undefined
+    refreshFailed.value = false
     await writeQuery(loaded.courtId, loaded.date)
   } catch (error) {
-    // Só a recusa do link é tratada aqui; a falha de rede ou do servidor é da Tarefa 10.
     if (error instanceof GradeRefusal) {
       grid.value = undefined
       refusal.value = error
       return
     }
-    throw error
+    showFailure(error)
   }
+}
+
+// Primeira carga, e também o "Tentar de novo": pede as quadras se ainda não vieram e a grade
+// da quadra e do dia da URL (o link, ou a última grade que carregou).
+async function loadPage(): Promise<void> {
+  loadError.value = undefined
+  if (!courts.value) {
+    try {
+      courts.value = await listCourts()
+    } catch (error) {
+      loadError.value = errorMessage(error)
+      return
+    }
+  }
+  if (courts.value.length === 0) return
+  courtId.value = queryText(route.query, 'quadra') ?? courts.value[0]?.id
+  await loadGrid(queryText(route.query, 'dia'))
 }
 
 // Volta para hoje: pede a grade sem `date` e tira o dia da URL. Se a recusa foi da quadra,
@@ -136,25 +179,31 @@ function selectDay(day: string): void {
 async function refreshGrid(): Promise<void> {
   const shown = grid.value
   if (!shown) return
-  const loaded = await getSlots(shown.courtId, shown.date)
   // Se a pessoa trocou de quadra ou de dia enquanto a resposta vinha, ela já é velha.
-  if (grid.value?.courtId !== shown.courtId || grid.value.date !== shown.date) return
-  showGrid(loaded)
+  const isStale = () => grid.value?.courtId !== shown.courtId || grid.value.date !== shown.date
+  try {
+    const loaded = await getSlots(shown.courtId, shown.date)
+    if (isStale()) return
+    showGrid(loaded)
+    refreshFailed.value = false
+  } catch (error) {
+    if (isStale()) return
+    // Virada da meia-noite: o dia em tela passou e a API recusa; a grade de hoje é a do servidor.
+    if (error instanceof GradeRefusal && error.reason === 'day') {
+      await loadGrid()
+      return
+    }
+    refreshFailed.value = true
+  }
 }
 
 const POLL_INTERVAL_MS = 15_000
 let pollTimer: ReturnType<typeof setInterval> | undefined
 
 onMounted(async () => {
-  pollTimer = setInterval(() => {
-    // O aviso "não foi possível atualizar" é da Tarefa 10; até lá, a falha só não pode
-    // derrubar o intervalo nem virar rejeição sem tratamento.
-    refreshGrid().catch(() => {})
-  }, POLL_INTERVAL_MS)
-  courts.value = await listCourts()
-  if (courts.value.length === 0) return
-  courtId.value = queryText(route.query, 'quadra') ?? courts.value[0]?.id
-  await loadGrid(queryText(route.query, 'dia'))
+  // `refreshGrid` trata as próprias falhas: nenhuma rejeição escapa do intervalo.
+  pollTimer = setInterval(() => void refreshGrid(), POLL_INTERVAL_MS)
+  await loadPage()
 })
 
 onUnmounted(() => {
@@ -181,6 +230,20 @@ onUnmounted(() => {
         @click="backToToday"
       >
         Voltar para hoje
+      </button>
+    </div>
+    <div v-else-if="loadError" role="alert" class="flex flex-col items-start gap-lg">
+      <p class="flex items-center gap-sm text-corpo text-texto">
+        <span aria-hidden="true" class="size-2 shrink-0 rounded-full bg-perigo" />
+        {{ loadError }}
+      </p>
+      <button
+        type="button"
+        data-test="retry"
+        class="min-h-11 rounded-lg bg-primaria px-lg text-corpo font-semibold text-texto hover:bg-primaria-escura hover:text-superficie focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primaria-escura"
+        @click="loadPage"
+      >
+        Tentar de novo
       </button>
     </div>
     <p v-else-if="!courts || !grid" class="text-legenda text-texto-suave">Carregando a grade…</p>
@@ -214,6 +277,17 @@ onUnmounted(() => {
             {{ selectionCount }}
           </p>
           <p class="text-legenda text-texto-suave">Claro: livre · Escuro: selecionado</p>
+          <!-- A região fica sempre na página para o leitor de tela anunciar o aviso quando ele entra. -->
+          <div data-test="refresh-warning-region" aria-live="polite">
+            <p
+              v-if="refreshFailed"
+              data-test="refresh-warning"
+              class="flex items-center gap-sm text-legenda text-texto"
+            >
+              <span aria-hidden="true" class="size-2 shrink-0 rounded-full bg-perigo" />
+              Não foi possível atualizar.
+            </p>
+          </div>
         </div>
       </div>
       <SlotList :slots="grid.slots" :selected="selectedInGrid" @toggle="toggleSlot" />

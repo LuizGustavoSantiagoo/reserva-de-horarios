@@ -136,7 +136,7 @@ sobrescrito no `TestingModule`.
   - Teste primeiro: componente com timers falsos: depois de 15 s o service é chamado de novo; um horário selecionado que voltou como `HELD` sai da seleção e o contador cai; o intervalo é limpo ao desmontar a página. Falha porque não há polling.
   - Arquivos previstos: `apps/web/src/features/grade/pages/GradePage.vue` e spec
 
-- [ ] **Tarefa 10 — Tratar falha de rede na grade**
+- [x] **Tarefa 10 — Tratar falha de rede na grade**
   - Cobre: CA10
   - Teste primeiro: componente: falha na primeira carga mostra o erro e "Tentar de novo", e o botão recarrega; falha no polling mantém a última grade e a seleção, e mostra "não foi possível atualizar"; o aviso some na próxima atualização bem-sucedida. Falha porque a página não distingue as duas falhas.
   - Arquivos previstos: `apps/web/src/features/grade/pages/GradePage.vue` e spec

@@ -489,6 +489,28 @@ describe('GradePage', () => {
       expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(2)
     })
 
+    it('a grade em tela vira passado (meia-noite): pede a grade de hoje sem date e grava o novo dia', async () => {
+      const { wrapper, router } = await mountAt()
+      await flushPromises()
+
+      // Passou da meia-noite em São Paulo: o dia em tela já é passado e a API recusa.
+      getSlotsMock.mockImplementation(async (courtId, date) => {
+        if (date === '2026-11-22') {
+          throw new GradeRefusal('day', 'Não é possível ver um dia que já passou.')
+        }
+        return { ...grid(courtId, date ?? '2026-11-23'), today: '2026-11-23' }
+      })
+      vi.advanceTimersByTime(POLL_MS)
+      await flushPromises()
+
+      expect(getSlotsMock).toHaveBeenLastCalledWith('q1', undefined)
+      expect(router.currentRoute.value.query).toEqual({ quadra: 'q1', dia: '2026-11-23' })
+      expect(wrapper.get('[data-test="grid-heading"]').text()).toContain(
+        'segunda-feira, 23 de novembro',
+      )
+      expect(wrapper.text()).not.toContain('já passou')
+    })
+
     it('desmontar a página limpa o intervalo', async () => {
       const { wrapper } = await mountAt()
       await flushPromises()
@@ -498,6 +520,141 @@ describe('GradePage', () => {
       await flushPromises()
 
       expect(getSlotsMock).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('falha de rede ou do servidor (CA10)', () => {
+    const POLL_MS = 15_000
+    const NETWORK_MESSAGE = 'Não foi possível conectar ao servidor.'
+
+    function counter(wrapper: Awaited<ReturnType<typeof mountAt>>['wrapper']) {
+      return wrapper.get('[data-test="selection-count"]').text()
+    }
+
+    it('a lista de quadras falha na primeira carga: mostra o erro e "Tentar de novo" carrega a grade', async () => {
+      listCourtsMock.mockRejectedValueOnce(new Error(NETWORK_MESSAGE))
+
+      const { wrapper } = await mountAt()
+      await flushPromises()
+
+      const alert = wrapper.get('[role="alert"]')
+      expect(alert.text()).toContain(NETWORK_MESSAGE)
+      expect(wrapper.text()).not.toContain('Carregando')
+      expect(wrapper.find('select').exists()).toBe(false)
+
+      const retry = wrapper.get('button[data-test="retry"]')
+      expect(retry.text()).toBe('Tentar de novo')
+      await retry.trigger('click')
+      await flushPromises()
+
+      expect(listCourtsMock).toHaveBeenCalledTimes(2)
+      expect(getSlotsMock).toHaveBeenCalledWith('q1', undefined)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+      expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(2)
+    })
+
+    it('a primeira grade falha: mostra o erro e "Tentar de novo" pede de novo a quadra e o dia do link', async () => {
+      getSlotsMock.mockRejectedValueOnce(new Error('Erro inesperado no servidor.'))
+
+      const { wrapper } = await mountAt({ quadra: 'q2', dia: '2026-11-25' })
+      await flushPromises()
+
+      expect(wrapper.get('[role="alert"]').text()).toContain('Erro inesperado no servidor.')
+      expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(0)
+
+      await wrapper.get('button[data-test="retry"]').trigger('click')
+      await flushPromises()
+
+      expect(listCourtsMock).toHaveBeenCalledTimes(1)
+      expect(getSlotsMock).toHaveBeenCalledTimes(2)
+      expect(getSlotsMock).toHaveBeenLastCalledWith('q2', '2026-11-25')
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+      expect(wrapper.get('[data-test="grid-heading"]').text()).toContain('Quadra 2')
+    })
+
+    it('a atualização automática falha: mantém a grade e a seleção e avisa; o aviso some na próxima que der certo', async () => {
+      const { wrapper } = await mountAt()
+      await flushPromises()
+      await wrapper.get('[data-test="slot-toggle"]').trigger('click')
+
+      getSlotsMock.mockRejectedValueOnce(new Error(NETWORK_MESSAGE))
+      vi.advanceTimersByTime(POLL_MS)
+      await flushPromises()
+
+      const warning = wrapper.get('[data-test="refresh-warning"]')
+      expect(warning.text()).toBe('Não foi possível atualizar.')
+      const region = wrapper.get('[data-test="refresh-warning-region"]')
+      expect(region.attributes('aria-live')).toBe('polite')
+      expect(region.element.contains(warning.element)).toBe(true)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+      expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(2)
+      expect(wrapper.get('[data-test="slot-toggle"]').attributes('aria-pressed')).toBe('true')
+      expect(counter(wrapper)).toBe('1 horário selecionado')
+
+      vi.advanceTimersByTime(POLL_MS)
+      await flushPromises()
+
+      expect(wrapper.find('[data-test="refresh-warning"]').exists()).toBe(false)
+      expect(counter(wrapper)).toBe('1 horário selecionado')
+    })
+
+    it('com a grade na tela, a troca de quadra que falha mantém a grade e a quadra em exibição e avisa', async () => {
+      const { wrapper, router } = await mountAt()
+      await flushPromises()
+      await wrapper.get('[data-test="slot-toggle"]').trigger('click')
+
+      getSlotsMock.mockRejectedValueOnce(new Error(NETWORK_MESSAGE))
+      await wrapper.get('select').setValue('q2')
+      await flushPromises()
+
+      expect(wrapper.get('[data-test="refresh-warning"]').text()).toBe('Não foi possível atualizar.')
+      expect(wrapper.get('[data-test="grid-heading"]').text()).toContain('Quadra 1')
+      expect((wrapper.get('select').element as HTMLSelectElement).value).toBe('q1')
+      expect(router.currentRoute.value.query).toEqual({ quadra: 'q1', dia: '2026-11-22' })
+      expect(counter(wrapper)).toBe('1 horário selecionado')
+
+      // A próxima atualização automática pede a grade que está na tela, não a que falhou.
+      vi.advanceTimersByTime(POLL_MS)
+      await flushPromises()
+      expect(getSlotsMock).toHaveBeenLastCalledWith('q1', '2026-11-22')
+      expect(wrapper.find('[data-test="refresh-warning"]').exists()).toBe(false)
+    })
+
+    it('com a grade na tela, a troca de dia que falha mantém a grade e avisa', async () => {
+      const { wrapper } = await mountAt()
+      await flushPromises()
+
+      getSlotsMock.mockRejectedValueOnce(new Error(NETWORK_MESSAGE))
+      await wrapper.get('button[aria-label="Próximo dia"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.find('[data-test="refresh-warning"]').exists()).toBe(true)
+      expect(wrapper.get('[data-test="grid-heading"]').text()).toContain('domingo, 22 de novembro')
+      expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(2)
+    })
+
+    it('"Voltar para hoje" que falha por rede mostra o erro com "Tentar de novo"', async () => {
+      getSlotsMock.mockImplementation(async (courtId, date) => {
+        if (date === '2026-11-01') {
+          throw new GradeRefusal('day', 'Não é possível ver um dia que já passou.')
+        }
+        throw new Error(NETWORK_MESSAGE)
+      })
+
+      const { wrapper } = await mountAt({ quadra: 'q2', dia: '2026-11-01' })
+      await flushPromises()
+      await wrapper.get('button[data-test="back-to-today"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.get('[role="alert"]').text()).toContain(NETWORK_MESSAGE)
+      expect(wrapper.find('button[data-test="back-to-today"]').exists()).toBe(false)
+
+      getSlotsMock.mockImplementation(async (courtId, date) => grid(courtId, date ?? '2026-11-22'))
+      await wrapper.get('button[data-test="retry"]').trigger('click')
+      await flushPromises()
+
+      expect(getSlotsMock).toHaveBeenLastCalledWith('q2', undefined)
+      expect(wrapper.findAll('[data-test="slot"]')).toHaveLength(2)
     })
   })
 })
