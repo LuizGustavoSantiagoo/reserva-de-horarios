@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 import { enableCors } from './common/cors.js';
+import { setupSwagger } from './common/swagger.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -10,18 +10,8 @@ async function bootstrap() {
   // O frontend chama a API de outra origem (VITE_API_URL): sem isto, o navegador barra a resposta.
   enableCors(app);
 
-  const config = new DocumentBuilder()
-    .setTitle('API da Reserva de Horários')
-    .setDescription(
-      'Todo sucesso responde `{ data }`; todo erro responde ' +
-        '`{ statusCode, error, message, fields?, path, timestamp }`.',
-    )
-    .setVersion('1.0')
-    .build();
-  // A função adia a montagem do documento para quando alguém abre /docs.
-  SwaggerModule.setup('docs', app, () =>
-    SwaggerModule.createDocument(app, config),
-  );
+  // Swagger UI em /docs (com o botão Authorize do Bearer) e o documento em /docs-json.
+  setupSwagger(app);
 
   await app.listen(process.env.PORT ?? 3000);
 }

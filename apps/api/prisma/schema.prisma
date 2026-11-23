@@ -9,6 +9,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  ADMIN
+  OPERATOR
+}
+
 enum ReservationStatus {
   HELD
   PENDING
@@ -80,4 +85,11 @@ model Reservation {
   court        Court             @relation(fields: [courtId], references: [id])
 
   @@unique([courtId, startsAt], where: raw("status IN ('HELD', 'PENDING', 'CONFIRMED')"))
+}
+
+model AdminUser {
+  id           String @id @default(uuid()) @db.Uuid
+  email        String @unique
+  passwordHash String
+  role         Role
 }

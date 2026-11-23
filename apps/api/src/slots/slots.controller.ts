@@ -7,6 +7,7 @@ import {
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
+import { Public } from '../common/auth/public.decorator.js';
 import { SlotGridDto } from './dto/slot-grid.dto.js';
 import { SlotsQueryDto } from './dto/slots-query.dto.js';
 import { SlotsService } from './slots.service.js';
@@ -17,6 +18,7 @@ import { SlotsService } from './slots.service.js';
 export class SlotsController {
   constructor(private readonly slots: SlotsService) {}
 
+  @Public()
   @Get()
   @ApiOperation({
     summary: 'Grade pública de uma quadra em um dia (rota pública)',

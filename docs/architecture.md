@@ -1,7 +1,7 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.6.0
+**Versão:** 1.11.0
 **Última atualização:** 2026-11-22
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
@@ -157,7 +157,12 @@ repassam o comando a cada app com `npm --prefix`.
    - `AuthGuard` **global** valida o `Authorization: Bearer <token>`; toda rota é
      protegida por padrão, e as públicas (grade, reserva, cancelamento por código,
      webhook, login) são marcadas explicitamente com `@Public()`.
-   - `RolesGuard` com `@Roles('ADMIN')` nas rotas administrativas.
+   - `RolesGuard` **global**, registrado como segundo `APP_GUARD` (depois do
+     `AuthGuard`, de quem lê o `request.user`), com `@Roles(...)` recebendo a lista de
+     papéis que alcançam a rota (ex.: `@Roles('ADMIN')` nas rotas administrativas).
+     Rota sem `@Roles` passa para qualquer usuário autenticado; papel fora da lista
+     recebe 403 "Seu perfil não tem acesso a esta operação.", antes da validação do
+     corpo.
    - Senha guardada só como hash `argon2`; login com credencial errada responde erro
      genérico, sem dizer se o usuário existe.
    - Rota pública **nunca** devolve telefone nem dado de pagamento (RN06): os DTOs de
@@ -211,9 +216,16 @@ repassam o comando a cada app com `npm --prefix`.
     `process.env` fora do módulo de configuração e do `prisma.config.ts`. Variáveis,
     só pelo **nome**: `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `JWT_SECRET`,
     `JWT_EXPIRES_IN`, `ABACATEPAY_API_KEY`, `ABACATEPAY_WEBHOOK_SECRET`,
-    `CORS_ORIGIN`, `PORT`. O repositório tem só o `.env.example`, com nomes e
+    `CORS_ORIGIN`, `PORT`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. `JWT_EXPIRES_IN` é a
+    validade do token em segundos (inteiro positivo), com padrão `28800` (8 h) quando
+    ausente. `ADMIN_EMAIL` e `ADMIN_PASSWORD` são lidas só pelo seed, através do
+    `prisma.config.ts` (export nomeado `adminSeedEnv`), e não entram no `ConfigModule`:
+    a API não precisa delas para subir. O repositório tem só o `.env.example`, com nomes e
     valores fictícios; `.env` está no `.gitignore`. Em produção, os valores vivem nos
-    *secrets* da plataforma de hospedagem; no CI, nos *secrets* do GitHub Actions.
+    *secrets* da plataforma de hospedagem; no CI, nos *secrets* do GitHub Actions —
+    exceto o `JWT_SECRET`, gerado a cada execução num passo do workflow
+    (`openssl rand -hex 32`), sem valor escrito no YAML; as `ADMIN_*` não entram no CI
+    (o e2e do seed as passa ao processo filho).
     O `prisma.config.ts` carrega o `apps/api/.env` com o `process.loadEnvFile()`
     nativo do Node (só se o arquivo existir — no CI ele não existe), sem a
     dependência `dotenv`. O cliente Prisma é gerado em `apps/api/generated/prisma`
@@ -239,7 +251,10 @@ repassam o comando a cada app com `npm --prefix`.
 - **Swagger UI interativo (ID14):** `@nestjs/swagger`, montado em **`/docs`** pelo
   `SwaggerModule.setup('docs', ...)`; o documento JSON fica em **`/docs-json`**.
   `DocumentBuilder` com `addBearerAuth()` e `@ApiBearerAuth()` nos controllers
-  administrativos, para testar as rotas protegidas direto na UI.
+  protegidos (toda rota sem `@Public()`, não só as de `ADMIN`), para testar as rotas
+  protegidas direto na UI pelo botão **Authorize**; as rotas públicas não declaram
+  segurança. A montagem fica em `src/common/swagger.ts` (`setupSwagger(app)`), chamada
+  pelo `main.ts` e pelos testes de ponta a ponta.
 - Todo DTO de entrada e de saída carrega os decorators do Swagger: rota sem
   documentação é rota incompleta na revisão.
 - O frontend roda `npm run api:types` (`openapi-typescript` sobre o `/docs-json`
@@ -274,12 +289,13 @@ tudo daquele domínio junto. É essa pasta que o Mapa de Domínios (§6) aponta.
     │   ├── prisma/        # schema.prisma, migrations/ e seed
     │   ├── prisma.config.ts
     │   ├── src/
-    │   │   ├── main.ts            # cabeçalhos de segurança, Swagger, rawBody
-    │   │   ├── app.module.ts      # APP_PIPE, APP_INTERCEPTOR e APP_FILTER (globais)
-    │   │   ├── common/            # exception filter, interceptor, guards, decorators (@Public, @Roles)
+    │   │   ├── main.ts            # cabeçalhos de segurança, CORS e Swagger (chama enableCors e setupSwagger), rawBody
+    │   │   ├── app.module.ts      # APP_PIPE, APP_INTERCEPTOR, APP_FILTER e APP_GUARD (globais)
+    │   │   ├── common/            # exception filter, interceptor, cors.ts, swagger.ts; auth/ com guards e decorators (@Public, @Roles, @CurrentUser)
     │   │   ├── config/            # ConfigModule e validação das variáveis
     │   │   ├── prisma/            # PrismaService (módulo global)
     │   │   ├── auth/              # login do administrador e emissão do JWT
+    │   │   ├── users/             # usuários do painel (ADMIN e OPERATOR) e perfil de quem está logado
     │   │   ├── arena/             # dados da arena única
     │   │   ├── courts/            # quadras
     │   │   ├── schedules/         # agenda semanal (ScheduleRule)
@@ -298,7 +314,7 @@ tudo daquele domínio junto. É essa pasta que o Mapa de Domínios (§6) aponta.
         │   │   ├── reserva/       # revisão, dados e pré-reserva
         │   │   ├── pagamento/     # Pix, espera e confirmação
         │   │   ├── cancelamento/  # cancelar com código
-        │   │   └── admin/         # login, agenda do dia, arena e quadras, agenda semanal
+        │   │   └── admin/         # login, agenda do dia, arena e quadras, agenda semanal; session-expired.ts na raiz
         │   ├── shared/            # componentes base (botão, campo, aviso) e composables comuns
         │   └── assets/            # main.css com @import "tailwindcss" e o @theme dos tokens
         └── e2e/                   # testes Playwright
@@ -308,6 +324,10 @@ Dentro de cada pasta de `features/`, a mesma forma: `pages/` (componentes de
 rota), `components/` (peças do domínio) e `services/` (o acesso à API daquele
 domínio). Pastas de código em inglês; as de `features/` seguem o nome da tela,
 porque espelham a interface, que é em português.
+
+Exceção: `features/admin/session-expired.ts` fica na raiz do domínio, fora das três
+pastas. Não é página, componente nem service: é o callback de sessão expirada que o
+`main.ts` registra no cliente HTTP (`onSessionExpired`) e que leva ao login pelo router.
 
 ---
 
@@ -328,10 +348,17 @@ porque espelham a interface, que é em português.
     `shared/`.
   - `shared/` não importa de `features/`.
 - **Token JWT (ID16).** O token do administrador fica em um composable de sessão
-  (`useSession`), em memória com cópia em `sessionStorage`: some ao fechar a aba. O
-  cliente HTTP anexa `Authorization: Bearer` a toda chamada administrativa; resposta
-  **401** limpa a sessão e leva ao login. As rotas `admin/` têm *navigation guard*
-  no Vue Router — conforto de UX; quem protege de verdade é o Guard da API.
+  (`useSession`, em `shared/composables/`), em memória com cópia em `sessionStorage`:
+  some ao fechar a aba. O mesmo composable guarda o perfil de quem entrou (`id`,
+  `email`, `role`, de `GET /users/me`) **só em memória**: recarregar a página busca de
+  novo, e trocar o token ou sair o descarta. O cliente HTTP (`src/api/client.ts`) anexa `Authorization:
+  Bearer` a toda chamada, quando há token guardado — e só ele monta esse cabeçalho;
+  sem token, o cabeçalho não vai. Resposta **401** limpa a sessão e leva ao login,
+  exceto na chamada que pede `{ sessionExpiry: false }` (o login, onde `401` é senha
+  errada). As rotas `admin/` têm *navigation guard*
+  no Vue Router: sem token leva ao login, e a rota com `meta.roles` barra quem não tem
+  o papel (lê o perfil da sessão ou o busca) — conforto de UX; quem protege de verdade
+  é o Guard da API.
 - **Assíncrono com estado visível.** Toda tela que busca dados trata os três
   estados: carregando, erro (com a mensagem do formato padrão da API) e vazio.
 - **Tempo real sem WebSocket.** A espera da confirmação do pagamento e a grade
@@ -362,7 +389,7 @@ porque espelham a interface, que é em português.
 | Aviso de pagamento | `PaymentEvent` | `id`, `paymentId`, `providerEventId` (único), `type`, `payload`, `receivedAt` |
 | Código de cancelamento | `Purchase.cancelCodeHash` | só o hash; o código em claro aparece uma vez na tela e nunca é gravado |
 | Cliente | **sem entidade** — `Purchase.customerName` e `Purchase.customerPhone` | não há conta de cliente (RN05) |
-| Administrador | `AdminUser` | `id`, `email`, `passwordHash`, `role` (`ADMIN`) |
+| Administrador / Operador (usuário do painel) | `AdminUser` | `id`, `email` (único, guardado sem espaços nas pontas e em minúsculas), `passwordHash`, `role` (`ADMIN` \| `OPERATOR`) |
 
 Nomes de status em inglês e maiúsculas; a tradução para a tela (`HELD` → "em
 reserva", `CONFIRMED` → "reservado") é feita só no frontend.
@@ -497,6 +524,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | Domínio | Módulo (pasta) | Guard | Dados (repository) | US |
 | :------ | :------------- | :---- | :----------------- | :-- |
 | Grade pública | `apps/api/src/slots/` (lê courts, schedules, blocks e purchases pelos services exportados) + `apps/web/src/features/grade/` | sem guard (rota pública) | `PrismaService` nos services | US01 |
+| Autenticação e usuários do painel | `apps/api/src/auth/`, `apps/api/src/users/` e `apps/api/src/common/auth/` + `apps/web/src/features/admin/` | `AuthGuard` + `RolesGuard` globais; `@Public()` no login; `@Roles('ADMIN')` em `POST /users` e `GET /users` | `AdminUser` via `PrismaService` no `UsersService` | US06 |
 
 ---
 
@@ -511,7 +539,13 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | 2026-11-13 | 1.4.0 | Tarefa 2 da US01 (#2): `VITE_API_URL` registrada como a variável do frontend, sem endereço padrão no código (§2.1, item 11) |
 | 2026-11-15 | 1.2.1 | Padrões de API (manutenção): `ValidationPipe`, interceptor e filtro registrados no `AppModule` (`APP_PIPE`, `APP_INTERCEPTOR`, `APP_FILTER`); `main.ts` fica com os cabeçalhos de segurança (`app.useSecurityHeaders()`) e o Swagger |
 | 2026-11-22 | 1.5.0 | Merge da `main` na branch da US01 (#2): reúne a 1.2.1 (padrões de API na `main`) com a 1.3.0 e a 1.4.0 (branch da US01) |
-| 2026-11-22 | 1.6.0 | Fechamento da US01 (#2): exceção do param validado no service com 404 (§2.1, item 2) e linha da grade pública no Mapa de Domínios (§6) |
+| 2026-11-22 | 1.6.0 | Tarefa 1 da US06 (#7): `AdminUser.role` passa a `ADMIN` \| `OPERATOR` (§5.1); `ADMIN_EMAIL` e `ADMIN_PASSWORD` lidas só pelo seed via `prisma.config.ts`, padrão de `JWT_EXPIRES_IN` (28800 s) e `JWT_SECRET` do CI gerado a cada execução (§2.1, item 11) |
+| 2026-11-22 | 1.7.0 | Tarefa 3 da US06 (#7): `@ApiBearerAuth()` nos controllers protegidos, e não só nos administrativos, e Swagger montado por `setupSwagger` em `src/common/swagger.ts` (§2.2); pasta `users/` na API, `APP_GUARD` no `app.module.ts`, `common/auth/` e o comentário do `main.ts` na árvore (§3) |
+| 2026-11-22 | 1.8.0 | Tarefa 4 da US06 (#7): `RolesGuard` global (segundo `APP_GUARD`) com `@Roles(...)` recebendo a lista de papéis, e não só `'ADMIN'`; 403 antes da validação do corpo (§2.1, item 6) |
+| 2026-11-22 | 1.9.0 | Tarefa 7 da US06 (#7): o cliente HTTP anexa o Bearer a toda chamada quando há token guardado, e não só às administrativas; `useSession` mora em `shared/composables/`; `401` com `{ sessionExpiry: false }` (login) não limpa a sessão (§4) |
+| 2026-11-22 | 1.10.0 | Fechamento da US06 (#7): indentação da pasta `users/` e `features/admin/session-expired.ts` como exceção à forma de `features/` (§3); `useSession` guarda também o perfil, só em memória, e o guard do painel barra por papel via `meta.roles` (§4); linha de autenticação e usuários no Mapa de Domínios (§6) |
+| 2026-11-22 | 1.6.0 (branch da US01) | Fechamento da US01 (#2): exceção do param validado no service com 404 (§2.1, item 2) e linha da grade pública no Mapa de Domínios (§6) |
+| 2026-11-22 | 1.11.0 | Merge da branch da US01 (#2) na da US06 (#7): reúne o fechamento da US01 (1.6.0 da branch da US01: exceção do 404 no service e linha da grade no §6) com a 1.6.0–1.10.0 da US06 |
 
 ---
 

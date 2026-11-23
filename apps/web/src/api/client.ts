@@ -1,6 +1,9 @@
-// Único ponto do frontend que conhece a URL da API e chama `fetch` (architecture §4).
+// Único ponto do frontend que conhece a URL da API, chama `fetch` e monta cabeçalhos
+// (architecture §4): é aqui, e só aqui, que o token da sessão vira `Authorization: Bearer`.
 // Sucesso chega como `{ data }`; erro, como `{ statusCode, error, message, fields?, path, timestamp }`
 // (architecture §2.1, item 5).
+
+import { useSession } from '@/shared/composables/useSession'
 
 const BASE_URL = requireApiUrl(import.meta.env.VITE_API_URL)
 
@@ -47,16 +50,59 @@ export class NetworkError extends Error {
 
 const GENERIC_ERROR_MESSAGE = 'Erro inesperado no servidor.'
 
-export async function apiGet<T>(path: string): Promise<T> {
+export interface RequestOptions {
+  /**
+   * `false` quando o `401` da chamada não quer dizer sessão vencida (o login: lá, `401` é
+   * senha errada). Padrão: `true`.
+   */
+  sessionExpiry?: boolean
+}
+
+let sessionExpiredHandler: (() => void) | undefined
+
+/** Registra quem é avisado quando a API recusa o token (`401`); a sessão já foi limpa. */
+export function onSessionExpired(handler: () => void): void {
+  sessionExpiredHandler = handler
+}
+
+export function apiGet<T>(path: string, options?: RequestOptions): Promise<T> {
+  return request<T>(path, { method: 'GET' }, options)
+}
+
+export function apiPost<T>(path: string, body: unknown, options?: RequestOptions): Promise<T> {
+  return request<T>(
+    path,
+    { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } },
+    options,
+  )
+}
+
+async function request<T>(
+  path: string,
+  init: { method: string; body?: string; headers?: Record<string, string> },
+  { sessionExpiry = true }: RequestOptions = {},
+): Promise<T> {
+  const session = useSession()
+  const headers: Record<string, string> = { Accept: 'application/json', ...init.headers }
+  // Sem token guardado, o cabeçalho não vai: as rotas públicas (a grade) seguem como antes.
+  if (session.token.value) {
+    headers.Authorization = `Bearer ${session.token.value}`
+  }
+
   let response: Response
   try {
-    response = await fetch(`${BASE_URL}${path}`, { headers: { Accept: 'application/json' } })
+    response = await fetch(`${BASE_URL}${path}`, { ...init, headers })
   } catch (error) {
     throw new NetworkError(error)
   }
 
   if (!response.ok) {
-    throw await toApiError(response)
+    const error = await toApiError(response)
+    if (response.status === 401 && sessionExpiry) {
+      session.clearSession()
+      sessionExpiredHandler?.()
+    }
+    throw error
   }
 
   const body = (await response.json()) as { data: T }

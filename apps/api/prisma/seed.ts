@@ -1,19 +1,25 @@
 import { PrismaPg } from '@prisma/adapter-pg';
+import argon2 from 'argon2';
 import { PrismaClient } from '../generated/prisma/client.ts';
-import prismaConfig from '../prisma.config.ts';
+import { Role } from '../generated/prisma/enums.ts';
+import prismaConfig, { adminSeedEnv } from '../prisma.config.ts';
+import { readAdminSeedInput, type AdminSeedInput } from './admin-seed.ts';
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 const OPENING_HOUR = 8;
 const CLOSING_HOUR = 22;
 const PRICE_CENTS = 8000;
 
+// Antes de tocar no banco: sem ADMIN_EMAIL/ADMIN_PASSWORD válidas, o seed falha sem gravar nada.
+const admin = readAdminSeedInput(adminSeedEnv);
+
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: prismaConfig.datasource?.url }),
 });
 
-async function seed(): Promise<void> {
+async function seedArena(): Promise<void> {
   if ((await prisma.arena.count()) > 0) {
-    console.log('Seed já aplicado: a arena existe. Nada a fazer.');
+    console.log('Arena já existente: etapa da arena pulada.');
     return;
   }
 
@@ -49,8 +55,25 @@ async function seed(): Promise<void> {
   console.log('Seed aplicado: arena, 3 quadras e agenda semanal.');
 }
 
+// Fora do return antecipado da arena: roda também num banco em que a arena já existia.
+// update vazio: rodar de novo não cria outro usuário nem troca a senha do existente.
+async function seedAdmin({ email, password }: AdminSeedInput): Promise<void> {
+  await prisma.adminUser.upsert({
+    where: { email },
+    update: {},
+    create: {
+      email,
+      passwordHash: await argon2.hash(password),
+      role: Role.ADMIN,
+    },
+  });
+
+  console.log('Seed do administrador aplicado.');
+}
+
 try {
-  await seed();
+  await seedArena();
+  await seedAdmin(admin);
 } finally {
   await prisma.$disconnect();
 }
