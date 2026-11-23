@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { RouterView, createMemoryHistory, type Router } from 'vue-router'
 import { useSession } from '@/shared/composables/useSession'
 import { ProfileError, getMe, type createOperator } from '@/features/admin/services/users.service'
+import type { createCourt, getArena } from '@/features/admin/services/courts.service'
 import type { getSlots, listCourts } from '@/features/grade/services/grade.service'
 import { createAppRouter } from './index'
 
@@ -20,6 +21,17 @@ vi.mock('@/features/admin/services/users.service', () => {
     CreateOperatorError,
     getMe: vi.fn<typeof getMe>(),
     createOperator: vi.fn<typeof createOperator>(),
+  }
+})
+
+vi.mock('@/features/admin/services/courts.service', () => {
+  class ArenaError extends Error {}
+  class CreateCourtError extends Error {}
+  return {
+    ArenaError,
+    CreateCourtError,
+    getArena: vi.fn<typeof getArena>(),
+    createCourt: vi.fn<typeof createCourt>(),
   }
 })
 
@@ -158,5 +170,33 @@ describe('guard de papel do cadastro de operador', () => {
 
     expect(router.currentRoute.value.fullPath).toBe('/admin')
     expect(useSession().token.value).toBe('jwt-admin')
+  })
+})
+
+describe('guard da página de quadras (CA9)', () => {
+  afterEach(() => {
+    vi.resetAllMocks()
+    useSession().clearSession()
+  })
+
+  it('sem token, /admin/quadras vai para /admin/login', async () => {
+    const router = makeRouter()
+
+    await router.push('/admin/quadras')
+
+    expect(router.currentRoute.value.fullPath).toBe('/admin/login')
+  })
+
+  it.each([
+    ['ADMIN', { id: 'u1', email: 'ana@arena.com', role: 'ADMIN' as const }],
+    ['OPERATOR', { id: 'u2', email: 'bia@arena.com', role: 'OPERATOR' as const }],
+  ])('com token, o %s abre /admin/quadras', async (_papel, profile) => {
+    useSession().setToken('jwt-valido')
+    useSession().setProfile(profile)
+    const router = makeRouter()
+
+    await router.push('/admin/quadras')
+
+    expect(router.currentRoute.value.name).toBe('admin-quadras')
   })
 })

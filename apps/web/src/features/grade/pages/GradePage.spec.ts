@@ -44,7 +44,10 @@ function grid(courtId: string, date: string): SlotGrid {
 async function mountAt(query: LocationQueryRaw = {}) {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/', name: 'grade', component: GradePage }],
+    routes: [
+      { path: '/', name: 'grade', component: GradePage },
+      { path: '/admin/login', name: 'admin-login', component: { render: () => null } },
+    ],
   })
   await router.push({ path: '/', query })
   await router.isReady()
@@ -65,6 +68,15 @@ describe('GradePage', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.resetAllMocks()
+  })
+
+  it('mostra no cabeçalho o link "Entrar no painel", que leva ao login do painel', async () => {
+    const { wrapper, router } = await mountAt()
+    await flushPromises()
+
+    const link = wrapper.findAll('header a').find((a) => a.text() === 'Entrar no painel')
+    expect(link?.attributes('href')).toBe(router.resolve({ name: 'admin-login' }).href)
+    expect(link?.attributes('href')).toBe('/admin/login')
   })
 
   it('mostra que está carregando enquanto a grade não chega', async () => {

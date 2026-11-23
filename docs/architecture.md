@@ -1,7 +1,7 @@
 # 🛠️ Architecture / Software Design Document
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.11.0
+**Versão:** 1.12.0
 **Última atualização:** 2026-11-22
 
 > 🤖 **O `prd.md` responde _o quê_ o produto faz. Este responde _onde as coisas
@@ -525,6 +525,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | :------ | :------------- | :---- | :----------------- | :-- |
 | Grade pública | `apps/api/src/slots/` (lê courts, schedules, blocks e purchases pelos services exportados) + `apps/web/src/features/grade/` | sem guard (rota pública) | `PrismaService` nos services | US01 |
 | Autenticação e usuários do painel | `apps/api/src/auth/`, `apps/api/src/users/` e `apps/api/src/common/auth/` + `apps/web/src/features/admin/` | `AuthGuard` + `RolesGuard` globais; `@Public()` no login; `@Roles('ADMIN')` em `POST /users` e `GET /users` | `AdminUser` via `PrismaService` no `UsersService` | US06 |
+| Arena e quadras | `apps/api/src/arena/` (`GET /arena`, arena com as quadras pelo `include` da relação 1:N; `ArenaService` exportado) e `apps/api/src/courts/` (`POST /courts` e `PATCH /courts/:id`, que chegam à arena pelo `ArenaService`) + `apps/web/src/features/admin/` (`QuadrasPage`) | `AuthGuard` global; `GET /courts` com `@Public()`; `@Roles('ADMIN')` em `POST /courts` e `PATCH /courts/:id` | `Arena` e `Court` via `PrismaService` no `ArenaService` e no `CourtsService` | US07 |
 
 ---
 
@@ -546,6 +547,7 @@ Restrições que o diagrama não desenha, mas o schema declara:
 | 2026-11-22 | 1.10.0 | Fechamento da US06 (#7): indentação da pasta `users/` e `features/admin/session-expired.ts` como exceção à forma de `features/` (§3); `useSession` guarda também o perfil, só em memória, e o guard do painel barra por papel via `meta.roles` (§4); linha de autenticação e usuários no Mapa de Domínios (§6) |
 | 2026-11-22 | 1.6.0 (branch da US01) | Fechamento da US01 (#2): exceção do param validado no service com 404 (§2.1, item 2) e linha da grade pública no Mapa de Domínios (§6) |
 | 2026-11-22 | 1.11.0 | Merge da branch da US01 (#2) na da US06 (#7): reúne o fechamento da US01 (1.6.0 da branch da US01: exceção do 404 no service e linha da grade no §6) com a 1.6.0–1.10.0 da US06 |
+| 2026-11-22 | 1.12.0 | Fechamento da US07 (#8): domínio `arena/` e as escritas de quadra em `courts/` (param `:id` validado por DTO) na linha nova do Mapa de Domínios (§6) |
 
 ---
 

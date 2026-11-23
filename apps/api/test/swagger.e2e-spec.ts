@@ -13,7 +13,10 @@ interface Operation {
 interface OpenApiDocument {
   security?: unknown;
   paths: Record<string, Record<string, Operation>>;
-  components?: { securitySchemes?: Record<string, unknown> };
+  components?: {
+    securitySchemes?: Record<string, unknown>;
+    schemas?: Record<string, { properties?: Record<string, unknown> }>;
+  };
 }
 
 // O main.ts monta o Swagger com o mesmo setupSwagger que este teste chama.
@@ -79,6 +82,81 @@ describe('/docs-json (e2e)', () => {
     expect(Object.keys(operation?.responses ?? {})).toEqual(
       expect.arrayContaining(['200', '400', '401', '403', '404']),
     );
+  });
+
+  it('GET /arena exige o Bearer e documenta 200, 401 e 404', () => {
+    const operation = document.paths['/arena']?.get;
+
+    expect(operation?.security).toEqual([{ bearer: [] }]);
+    expect(Object.keys(operation?.responses ?? {})).toEqual(
+      expect.arrayContaining(['200', '401', '404']),
+    );
+    expect(JSON.stringify(operation?.responses?.['200'])).toContain(
+      '#/components/schemas/ArenaDto',
+    );
+    expect(
+      Object.keys(document.components?.schemas?.ArenaDto?.properties ?? {}),
+    ).toEqual(['id', 'name', 'address', 'courts']);
+    expect(
+      Object.keys(
+        document.components?.schemas?.ArenaCourtDto?.properties ?? {},
+      ),
+    ).toEqual(['id', 'name', 'isActive']);
+  });
+
+  it('POST /courts exige o Bearer, documenta 201, 400, 401, 403 e 409 e os DTOs de entrada e saída', () => {
+    const operation = document.paths['/courts']?.post as Operation & {
+      requestBody?: unknown;
+    };
+
+    expect(operation?.security).toEqual([{ bearer: [] }]);
+    expect(Object.keys(operation?.responses ?? {})).toEqual(
+      expect.arrayContaining(['201', '400', '401', '403', '409']),
+    );
+    expect(JSON.stringify(operation?.requestBody)).toContain(
+      '#/components/schemas/CourtNameDto',
+    );
+    expect(JSON.stringify(operation?.responses?.['201'])).toContain(
+      '#/components/schemas/CreatedCourtDto',
+    );
+    expect(
+      Object.keys(document.components?.schemas?.CourtNameDto?.properties ?? {}),
+    ).toEqual(['name']);
+    expect(
+      Object.keys(
+        document.components?.schemas?.CreatedCourtDto?.properties ?? {},
+      ).sort(),
+    ).toEqual(['arenaId', 'id', 'isActive', 'name']);
+  });
+
+  it('PATCH /courts/{id} exige o Bearer, documenta 200, 400, 401, 403, 404 e 409 e os DTOs de entrada e saída', () => {
+    const operation = document.paths['/courts/{id}']?.patch as Operation & {
+      requestBody?: unknown;
+    };
+
+    expect(operation?.security).toEqual([{ bearer: [] }]);
+    expect(operation?.parameters).toEqual([
+      expect.objectContaining({
+        name: 'id',
+        in: 'path',
+        required: true,
+        schema: expect.objectContaining({ format: 'uuid' }),
+      }),
+    ]);
+    expect(Object.keys(operation?.responses ?? {})).toEqual(
+      expect.arrayContaining(['200', '400', '401', '403', '404', '409']),
+    );
+    expect(JSON.stringify(operation?.requestBody)).toContain(
+      '#/components/schemas/CourtNameDto',
+    );
+    expect(JSON.stringify(operation?.responses?.['200'])).toContain(
+      '#/components/schemas/AdminCourtDto',
+    );
+    expect(
+      Object.keys(
+        document.components?.schemas?.AdminCourtDto?.properties ?? {},
+      ).sort(),
+    ).toEqual(['id', 'isActive', 'name']);
   });
 
   it.each([

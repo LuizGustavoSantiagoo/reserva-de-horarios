@@ -1,7 +1,7 @@
 # 📄 Product Requirements Document (PRD)
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.6.0
+**Versão:** 1.8.0
 **Última atualização:** 2026-11-22
 
 > 🤖 **Este documento é a fonte da verdade sobre o QUE o produto faz.** Regra de
@@ -67,7 +67,7 @@ de ninguém.
 | :--- | :----- | :--- | :------- |
 | **Cliente** | Qualquer pessoa, **sem conta**. Identifica-se com nome e telefone na hora de reservar. | Ver a arena, as quadras e a grade de horários; reservar um ou mais horários livres numa compra; pagar por Pix; ver o próprio código de cancelamento; cancelar a própria reserva apresentando o código. | Editar a arena; cadastrar quadra ou agenda; bloquear horário; ver telefone ou dados de pagamento de outros clientes; cancelar ou alterar reserva de outra pessoa. |
 | **Administrador** | Quem opera o sistema. Entra com **login e senha**. | Editar os dados da arena; cadastrar, editar e inativar quadras; definir a agenda; ver todas as reservas com nome, telefone e situação do pagamento; bloquear e desbloquear horário; cancelar qualquer reserva; cadastrar contas de operador e ver todas as contas do painel. | Criar ou excluir a arena; alterar o valor de um pagamento já confirmado; apagar o histórico de pagamentos (é a prova de que o dinheiro entrou). |
-| **Operador** | Funcionário da arena. Entra com **login e senha**, numa conta criada pelo administrador. | Entrar no painel e ver o próprio perfil. O que mais ele faz no painel entra com a história que o incluir (a agenda do dia, US09). | Tudo o que é só do administrador: editar a arena; cadastrar quadra ou agenda; bloquear horário; cancelar reserva; cadastrar contas; ver a conta de outro usuário. |
+| **Operador** | Funcionário da arena. Entra com **login e senha**, numa conta criada pelo administrador. | Entrar no painel e ver o próprio perfil; ver os dados da arena e a lista de quadras, ativas e inativas, só para leitura (US07). O que mais ele faz no painel entra com a história que o incluir (a agenda do dia, US09). | Tudo o que é só do administrador: editar a arena; cadastrar, editar, inativar ou reativar quadra; cadastrar agenda; bloquear horário; cancelar reserva; cadastrar contas; ver a conta de outro usuário. |
 
 > 🔐 Como o cliente não tem conta, **toda a autenticação (JWT) e o controle por role
 > vivem do lado do painel** — administrador e operador: a grade e a reserva são
@@ -189,7 +189,7 @@ seu papel permite.
 
 ---
 
-### US07 — Gerenciar a arena e cadastrar quadras · `Must Have` · `M` · Status: `🟡 Ready`
+### US07 — Gerenciar a arena e cadastrar quadras · `Must Have` · `M` · Status: `🟢 Live`
 
 **Como** administrador, **eu quero** manter os dados da arena e cadastrar suas quadras **para que**
 elas possam receber agenda e reservas.
@@ -203,6 +203,7 @@ elas possam receber agenda e reservas.
 - [ ] **Dado** uma quadra sem reservas futuras ativas, **quando** eu a inativo, **então** ela sai da grade pública e não recebe reserva nova até eu reativá-la.
 - [ ] **Dado** uma quadra com reservas futuras ativas, **quando** tento excluí-la ou inativá-la, **então** sou impedido e orientado a cancelar as reservas antes.
 - [ ] **Dado** que não estou autenticado, **quando** tento cadastrar ou editar, **então** sou recusado.
+- [ ] **Dado** que sou operador, **quando** abro as quadras no painel, **então** vejo a arena e a lista de quadras, mas sou recusado ao cadastrar, editar, inativar ou reativar quadra, ou ao editar a arena.
 
 **Regras relacionadas:** RN13, RN14, RN21
 
@@ -353,3 +354,5 @@ imprevisto de quem pediu cancelamento por fora.
 | 2026-10-12 | 1.4.0 | Revisão da Entrega 1: botão **Conferir pagamento** na tela de espera, que consulta o provedor quando o aviso demora — a confirmação passa a vir do aviso autenticado **ou** da consulta do sistema ao provedor (RN02, US03) |
 | 2026-11-22 | 1.5.0 | Spec da US06 (#7): novo ator **Operador** (funcionário da arena, conta criada pelo administrador, sem poder de administração) no glossário e nos atores; autenticação passa a ser do **painel**, não só do administrador; US06 cobre administrador e operador, com cadastro de operador, recusa por papel e limite de tentativas no login (RN24) |
 | 2026-11-22 | 1.6.0 | Fechamento da US06 (#7): story em `🟢 Live` |
+| 2026-11-22 | 1.7.0 | Spec da US07 (#8): o **Operador** passa a ver os dados da arena e a lista de quadras no painel, só para leitura, e é recusado ao alterá-las (§3, US07) |
+| 2026-11-22 | 1.8.0 | Fechamento da US07 (#8), com escopo reduzido: ver a arena com as quadras, cadastrar e renomear quadra; story em `🟢 Live` (inativar, editar a arena e excluir quadra ficam para uma Issue própria) |
