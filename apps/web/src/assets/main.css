@@ -1,35 +1,47 @@
-@import './base.css';
+@import 'tailwindcss';
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+/*
+ * Tokens de docs/design-tokens.md, com o mesmo nome semântico (architecture §2).
+ * Cor, espaçamento ou fonte fora daqui não entram em componente.
+ */
+@theme {
+  /* Paleta → bg-primaria, text-perigo, ring-primaria-escura... */
+  --color-primaria: #fbbf24;
+  --color-primaria-escura: #b45309;
+  --color-superficie: #ffffff;
+  --color-texto: #18181b;
+  --color-texto-suave: #52525b;
+  --color-perigo: oklch(57.7% 0.245 27.325);
+  --color-sucesso: oklch(72.3% 0.219 149.579);
+  --color-desabilitado: #d4d4d8;
+
+  /* Escala de espaçamento → p-md, gap-lg, mt-xl... */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 0.75rem;
+  --spacing-lg: 1rem;
+  --spacing-xl: 1.5rem;
+  --spacing-2xl: 2rem;
+
+  /* Famílias: Roboto no texto (font-sans é a padrão da página); Roboto Mono no código */
+  --font-sans: 'Roboto', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, monospace;
+
+  /* Tipografia → text-titulo-pagina, text-corpo... (tamanho + peso) */
+  --text-titulo-pagina: 1.5rem;
+  --text-titulo-pagina--font-weight: 700;
+  --text-titulo-card: 1.125rem;
+  --text-titulo-card--font-weight: 600;
+  --text-corpo: 1rem;
+  --text-corpo--font-weight: 400;
+  --text-legenda: 0.875rem;
+  --text-legenda--font-weight: 400;
+  --text-codigo: 1.25rem;
+  --text-codigo--font-weight: 600;
 }
 
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
-}
-
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-}
-
-@media (min-width: 1024px) {
+@layer base {
   body {
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
+    @apply bg-superficie font-sans text-corpo text-texto;
   }
 }

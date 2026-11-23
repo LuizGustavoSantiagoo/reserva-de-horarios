@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test'
 
-// See here how to get started:
-// https://playwright.dev/docs/intro
-test('visits the app root url', async ({ page }) => {
+// O título da grade não depende da API: a página monta em `/` mesmo sem servidor (CI).
+test('a página da grade monta em /', async ({ page }) => {
   await page.goto('/')
-  await expect(page.locator('h1')).toHaveText('You did it!')
+  await expect(page.getByRole('heading', { level: 1, name: 'Escolha seus horários' })).toBeVisible()
 })

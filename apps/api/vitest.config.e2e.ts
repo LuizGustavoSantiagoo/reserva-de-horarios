@@ -6,5 +6,7 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.e2e-spec.ts'],
+    // Os e2e limpam e preenchem o mesmo banco: um arquivo por vez.
+    fileParallelism: false,
   },
 });

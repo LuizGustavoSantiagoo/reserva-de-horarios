@@ -1,8 +1,8 @@
 # 🎨 Tokens de Design
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.1.0
-**Última atualização:** 2026-10-04
+**Versão:** 1.2.0
+**Última atualização:** 2026-11-22
 
 > 🤖 **Este documento existe para a IA parar de inventar um botão diferente a cada
 > tela.** Não é um design system — é o mínimo que dá à prototipagem assistida algo a
@@ -98,7 +98,10 @@ o sistema expirando a cobrança, e o efeito aparece nas telas 1 e 3 do cliente.
 
 1. **Grade de horários** (US01, US02) — escolher quadra e dia e marcar vários horários;
    livre, em reserva, reservado com o primeiro nome, bloqueado e já iniciado; dia sem
-   agenda; avisos "alguém está reservando agora" e "o tempo acabou"
+   agenda; avisos "alguém está reservando agora" e "o tempo acabou".
+   Referência: [`prototipo/01-grade.png`](prototipo/01-grade.png).
+   **Decisão do usuário:** o dia escolhido fica destacado (fundo `primaria`), diferente
+   do Figma, para a pessoa saber qual dia está vendo.
 2. **Revisão e dados** (US02) — horários escolhidos, total, nome e telefone, contador
    dos 3 minutos e aviso do horário que saiu da compra
 3. **Pix** (US02, US04) — um único Pix com a soma; aviso de cobrança vencida
@@ -123,3 +126,4 @@ o sistema expirando a cobrança, e o efeito aparece nas telas 1 e 3 do cliente.
 | :--- | :----- | :---------- |
 | 2026-09-20 | 1.0.0 | Tokens definidos via `/utf-design`; link do protótipo registrado |
 | 2026-10-04 | 1.1.0 | Revisão contra o protótipo novo: espaçamento e tipografia em `rem`, degrau `2xl` na escala, rótulos de carregando, novo link e as dez telas das Must Have |
+| 2026-11-22 | 1.2.0 | Imagem `prototipo/01-grade.png` registrada como referência da tela 1; decisão do usuário: o dia escolhido fica destacado (fundo `primaria`), diferente do Figma |

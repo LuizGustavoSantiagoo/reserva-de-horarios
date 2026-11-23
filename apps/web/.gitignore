@@ -40,3 +40,6 @@ __screenshots__/
 
 test-results/
 playwright-report/
+
+# Tipos gerados do Swagger vivo pelo `npm run api:types` (architecture §2.2): nunca commitar
+src/api/schema.d.ts
