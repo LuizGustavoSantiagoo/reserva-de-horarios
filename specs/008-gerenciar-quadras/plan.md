@@ -49,7 +49,7 @@ continua `@Public()`. O `CourtsService` ganha `create(name)` e `rename(id, name)
 
 ## Tarefas
 
-- [ ] **Tarefa 1 — Ver a arena com as suas quadras (API)**
+- [x] **Tarefa 1 — Ver a arena com as suas quadras (API)**
   - Cobre: CA1, CA7 (para `GET /arena`), CA8 (para `GET /arena`)
   - Teste primeiro: e2e `arena.e2e-spec.ts`: `ADMIN` e `OPERATOR` recebem `200` com a
     arena e **todas** as quadras (ativas e inativas) por nome, só com `id`, `name`,

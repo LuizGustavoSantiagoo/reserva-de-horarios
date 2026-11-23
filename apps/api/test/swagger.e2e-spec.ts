@@ -13,7 +13,10 @@ interface Operation {
 interface OpenApiDocument {
   security?: unknown;
   paths: Record<string, Record<string, Operation>>;
-  components?: { securitySchemes?: Record<string, unknown> };
+  components?: {
+    securitySchemes?: Record<string, unknown>;
+    schemas?: Record<string, { properties?: Record<string, unknown> }>;
+  };
 }
 
 // O main.ts monta o Swagger com o mesmo setupSwagger que este teste chama.
@@ -79,6 +82,26 @@ describe('/docs-json (e2e)', () => {
     expect(Object.keys(operation?.responses ?? {})).toEqual(
       expect.arrayContaining(['200', '400', '401', '403', '404']),
     );
+  });
+
+  it('GET /arena exige o Bearer e documenta 200, 401 e 404', () => {
+    const operation = document.paths['/arena']?.get;
+
+    expect(operation?.security).toEqual([{ bearer: [] }]);
+    expect(Object.keys(operation?.responses ?? {})).toEqual(
+      expect.arrayContaining(['200', '401', '404']),
+    );
+    expect(JSON.stringify(operation?.responses?.['200'])).toContain(
+      '#/components/schemas/ArenaDto',
+    );
+    expect(
+      Object.keys(document.components?.schemas?.ArenaDto?.properties ?? {}),
+    ).toEqual(['id', 'name', 'address', 'courts']);
+    expect(
+      Object.keys(
+        document.components?.schemas?.ArenaCourtDto?.properties ?? {},
+      ),
+    ).toEqual(['id', 'name', 'isActive']);
   });
 
   it.each([
