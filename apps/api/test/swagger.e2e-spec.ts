@@ -129,6 +129,36 @@ describe('/docs-json (e2e)', () => {
     ).toEqual(['arenaId', 'id', 'isActive', 'name']);
   });
 
+  it('PATCH /courts/{id} exige o Bearer, documenta 200, 400, 401, 403, 404 e 409 e os DTOs de entrada e saída', () => {
+    const operation = document.paths['/courts/{id}']?.patch as Operation & {
+      requestBody?: unknown;
+    };
+
+    expect(operation?.security).toEqual([{ bearer: [] }]);
+    expect(operation?.parameters).toEqual([
+      expect.objectContaining({
+        name: 'id',
+        in: 'path',
+        required: true,
+        schema: expect.objectContaining({ format: 'uuid' }),
+      }),
+    ]);
+    expect(Object.keys(operation?.responses ?? {})).toEqual(
+      expect.arrayContaining(['200', '400', '401', '403', '404', '409']),
+    );
+    expect(JSON.stringify(operation?.requestBody)).toContain(
+      '#/components/schemas/CourtNameDto',
+    );
+    expect(JSON.stringify(operation?.responses?.['200'])).toContain(
+      '#/components/schemas/AdminCourtDto',
+    );
+    expect(
+      Object.keys(
+        document.components?.schemas?.AdminCourtDto?.properties ?? {},
+      ).sort(),
+    ).toEqual(['id', 'isActive', 'name']);
+  });
+
   it.each([
     { rota: 'GET /', path: '/', method: 'get' },
     { rota: 'GET /courts', path: '/courts', method: 'get' },

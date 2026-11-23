@@ -74,4 +74,80 @@ describe('CourtsService', () => {
       expect(create).not.toHaveBeenCalled();
     });
   });
+
+  describe('rename', () => {
+    function setup({
+      court = { arenaId: 'arena-1' },
+      existing = null,
+    }: { court?: unknown; existing?: unknown } = {}) {
+      const findUnique = vi.fn().mockResolvedValue(court);
+      const findFirst = vi.fn().mockResolvedValue(existing);
+      const update = vi.fn().mockResolvedValue({
+        id: 'quadra-1',
+        name: 'Quadra Nova',
+        isActive: false,
+      });
+      const prisma = {
+        court: { findUnique, findFirst, update },
+      } as unknown as PrismaService;
+      const arena = {} as unknown as ArenaService;
+      return {
+        service: new CourtsService(prisma, arena),
+        findUnique,
+        findFirst,
+        update,
+      };
+    }
+
+    it('grava o nome novo e devolve id, name e isActive, sem mexer em isActive', async () => {
+      const { service, findUnique, findFirst, update } = setup();
+
+      const result = await service.rename('quadra-1', 'Quadra Nova');
+
+      expect(result).toEqual({
+        id: 'quadra-1',
+        name: 'Quadra Nova',
+        isActive: false,
+      });
+      expect(findUnique).toHaveBeenCalledWith({
+        where: { id: 'quadra-1' },
+        select: { arenaId: true },
+      });
+      expect(findFirst).toHaveBeenCalledWith({
+        where: {
+          arenaId: 'arena-1',
+          name: { equals: 'Quadra Nova', mode: 'insensitive' },
+          NOT: { id: 'quadra-1' },
+        },
+        select: { id: true },
+      });
+      expect(update).toHaveBeenCalledWith({
+        where: { id: 'quadra-1' },
+        data: { name: 'Quadra Nova' },
+        select: { id: true, name: true, isActive: true },
+      });
+    });
+
+    it('com id que não existe lança 404 "quadra não encontrada" e não grava', async () => {
+      const { service, update } = setup({ court: null });
+
+      const promise = service.rename('quadra-x', 'Quadra Nova');
+
+      await expect(promise).rejects.toBeInstanceOf(NotFoundException);
+      await expect(promise).rejects.toThrow('quadra não encontrada');
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('com nome igual ao de outra quadra da arena lança 409 e não grava', async () => {
+      const { service, update } = setup({ existing: { id: 'quadra-2' } });
+
+      const promise = service.rename('quadra-1', 'quadra 2');
+
+      await expect(promise).rejects.toBeInstanceOf(ConflictException);
+      await expect(promise).rejects.toThrow(
+        'Já existe uma quadra com este nome.',
+      );
+      expect(update).not.toHaveBeenCalled();
+    });
+  });
 });

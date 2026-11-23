@@ -75,7 +75,7 @@ continua `@Public()`. O `CourtsService` ganha `create(name)` e `rename(id, name)
     `dto/admin-court.dto.ts`, `apps/api/src/arena/arena.module.ts` (export),
     `apps/api/test/courts-admin.e2e-spec.ts`, `apps/api/test/swagger.e2e-spec.ts`
 
-- [ ] **Tarefa 3 — Renomear quadra (API)**
+- [x] **Tarefa 3 — Renomear quadra (API)**
   - Cobre: CA4 (renomeação), CA5, CA6 (para `PATCH /courts/:id`), CA7, CA8
   - Teste primeiro: no `courts-admin.e2e-spec.ts`: `ADMIN` renomeia → `200` com o
     nome novo e `isActive` inalterado, visível em `GET /arena` e `GET /courts`;
