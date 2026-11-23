@@ -25,4 +25,11 @@ export class ArenaService {
     if (!arena) throw new NotFoundException(ARENA_NOT_FOUND);
     return arena;
   }
+
+  /** O id da arena única (RN21), para ligar a ela o que se cadastra. Sem arena, 404. */
+  async findId(): Promise<string> {
+    const arena = await this.prisma.arena.findFirst({ select: { id: true } });
+    if (!arena) throw new NotFoundException(ARENA_NOT_FOUND);
+    return arena.id;
+  }
 }

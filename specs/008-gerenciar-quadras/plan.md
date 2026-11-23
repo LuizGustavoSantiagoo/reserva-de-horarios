@@ -60,7 +60,7 @@ continua `@Public()`. O `CourtsService` ganha `create(name)` e `rename(id, name)
     `arena.service.ts` e spec, `dto/arena.dto.ts`, `apps/api/src/app.module.ts`,
     `apps/api/test/arena.e2e-spec.ts`, `apps/api/test/swagger.e2e-spec.ts`
 
-- [ ] **Tarefa 2 — Cadastrar quadra ligada à arena (API)**
+- [x] **Tarefa 2 — Cadastrar quadra ligada à arena (API)**
   - Cobre: CA2, CA3, CA4 (cadastro), CA6 (para `POST /courts`), CA7, CA8
   - Teste primeiro: e2e `courts-admin.e2e-spec.ts`: `ADMIN` cria → `201` com
     `arenaId` da arena e nome sem espaços nas pontas; a quadra aparece em `GET /arena`,

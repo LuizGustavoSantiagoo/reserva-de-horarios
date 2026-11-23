@@ -41,4 +41,26 @@ describe('ArenaService', () => {
       await expect(promise).rejects.toThrow('arena não encontrada');
     });
   });
+
+  describe('findId', () => {
+    it('devolve só o id da arena única', async () => {
+      const findFirst = vi.fn().mockResolvedValue({ id: 'arena-1' });
+      const prisma = { arena: { findFirst } } as unknown as PrismaService;
+
+      const result = await new ArenaService(prisma).findId();
+
+      expect(result).toBe('arena-1');
+      expect(findFirst).toHaveBeenCalledWith({ select: { id: true } });
+    });
+
+    it('sem arena lança NotFoundException "arena não encontrada"', async () => {
+      const findFirst = vi.fn().mockResolvedValue(null);
+      const prisma = { arena: { findFirst } } as unknown as PrismaService;
+
+      const promise = new ArenaService(prisma).findId();
+
+      await expect(promise).rejects.toBeInstanceOf(NotFoundException);
+      await expect(promise).rejects.toThrow('arena não encontrada');
+    });
+  });
 });

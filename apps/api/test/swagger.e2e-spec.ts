@@ -104,6 +104,31 @@ describe('/docs-json (e2e)', () => {
     ).toEqual(['id', 'name', 'isActive']);
   });
 
+  it('POST /courts exige o Bearer, documenta 201, 400, 401, 403 e 409 e os DTOs de entrada e saída', () => {
+    const operation = document.paths['/courts']?.post as Operation & {
+      requestBody?: unknown;
+    };
+
+    expect(operation?.security).toEqual([{ bearer: [] }]);
+    expect(Object.keys(operation?.responses ?? {})).toEqual(
+      expect.arrayContaining(['201', '400', '401', '403', '409']),
+    );
+    expect(JSON.stringify(operation?.requestBody)).toContain(
+      '#/components/schemas/CourtNameDto',
+    );
+    expect(JSON.stringify(operation?.responses?.['201'])).toContain(
+      '#/components/schemas/CreatedCourtDto',
+    );
+    expect(
+      Object.keys(document.components?.schemas?.CourtNameDto?.properties ?? {}),
+    ).toEqual(['name']);
+    expect(
+      Object.keys(
+        document.components?.schemas?.CreatedCourtDto?.properties ?? {},
+      ).sort(),
+    ).toEqual(['arenaId', 'id', 'isActive', 'name']);
+  });
+
   it.each([
     { rota: 'GET /', path: '/', method: 'get' },
     { rota: 'GET /courts', path: '/courts', method: 'get' },
