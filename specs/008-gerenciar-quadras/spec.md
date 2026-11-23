@@ -1,6 +1,6 @@
 ---
 issue: 8
-status: rascunho   # rascunho | aprovada
+status: aprovada   # rascunho | aprovada
 ---
 
 # US07 — Gerenciar a arena e cadastrar quadras
