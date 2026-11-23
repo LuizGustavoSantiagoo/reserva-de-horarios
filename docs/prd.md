@@ -1,7 +1,7 @@
 # 📄 Product Requirements Document (PRD)
 
 **Projeto:** Reserva de Horários em Quadras de Areia
-**Versão:** 1.7.0
+**Versão:** 1.8.0
 **Última atualização:** 2026-11-22
 
 > 🤖 **Este documento é a fonte da verdade sobre o QUE o produto faz.** Regra de
@@ -189,7 +189,7 @@ seu papel permite.
 
 ---
 
-### US07 — Gerenciar a arena e cadastrar quadras · `Must Have` · `M` · Status: `🟡 Ready`
+### US07 — Gerenciar a arena e cadastrar quadras · `Must Have` · `M` · Status: `🟢 Live`
 
 **Como** administrador, **eu quero** manter os dados da arena e cadastrar suas quadras **para que**
 elas possam receber agenda e reservas.
@@ -355,3 +355,4 @@ imprevisto de quem pediu cancelamento por fora.
 | 2026-11-22 | 1.5.0 | Spec da US06 (#7): novo ator **Operador** (funcionário da arena, conta criada pelo administrador, sem poder de administração) no glossário e nos atores; autenticação passa a ser do **painel**, não só do administrador; US06 cobre administrador e operador, com cadastro de operador, recusa por papel e limite de tentativas no login (RN24) |
 | 2026-11-22 | 1.6.0 | Fechamento da US06 (#7): story em `🟢 Live` |
 | 2026-11-22 | 1.7.0 | Spec da US07 (#8): o **Operador** passa a ver os dados da arena e a lista de quadras no painel, só para leitura, e é recusado ao alterá-las (§3, US07) |
+| 2026-11-22 | 1.8.0 | Fechamento da US07 (#8), com escopo reduzido: ver a arena com as quadras, cadastrar e renomear quadra; story em `🟢 Live` (inativar, editar a arena e excluir quadra ficam para uma Issue própria) |
