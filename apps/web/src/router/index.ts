@@ -37,6 +37,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/features/admin/pages/CadastrarOperadorPage.vue'),
         meta: { roles: ['ADMIN'] },
       },
+      {
+        // Sem `roles`: os dois papéis veem as quadras; só o ADMIN vê o formulário (CA9, CA10).
+        path: 'quadras',
+        name: 'admin-quadras',
+        component: () => import('@/features/admin/pages/QuadrasPage.vue'),
+      },
     ],
   },
 ]

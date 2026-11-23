@@ -29,6 +29,7 @@ function makeRouter(): Router {
           { path: '', name: 'admin', component: Empty },
           // O link do menu aponta para o nome da rota, não para o caminho escrito à mão.
           { path: 'operadores/cadastro-de-teste', name: 'admin-novo-operador', component: Empty },
+          { path: 'quadras-de-teste', name: 'admin-quadras', component: Empty },
         ],
       },
     ],
@@ -85,6 +86,17 @@ describe('AdminLayout', () => {
     expect(wrapper.text()).toContain('Operador')
     expect(wrapper.text()).not.toContain('Administrador')
     expect(findLink(wrapper, 'Cadastrar operador')).toBeUndefined()
+  })
+
+  it.each([
+    ['ADMIN', ADMIN],
+    ['OPERATOR', OPERATOR],
+  ])('o %s vê o item Quadras, que leva à página de quadras (CA9)', async (_papel, user) => {
+    getMeMock.mockResolvedValue(user)
+
+    const { wrapper } = await mountLayout()
+
+    expect(findLink(wrapper, 'Quadras')?.attributes('href')).toBe('/admin/quadras-de-teste')
   })
 
   it('mostra que está carregando enquanto o perfil não chega', async () => {

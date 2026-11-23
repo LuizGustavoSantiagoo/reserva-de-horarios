@@ -55,6 +55,12 @@ onMounted(loadProfile)
       </div>
       <nav aria-label="Menu do painel" class="flex flex-wrap items-center gap-lg">
         <!-- TODO #10: a agenda do dia (US09) entra neste menu, para os dois papéis. -->
+        <RouterLink
+          :to="{ name: 'admin-quadras' }"
+          class="text-corpo font-semibold text-primaria-escura underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primaria-escura"
+        >
+          Quadras
+        </RouterLink>
         <!-- Esconder o item é conforto: quem barra o Operador é a API (CA10, CA16). -->
         <RouterLink
           v-if="user?.role === 'ADMIN'"

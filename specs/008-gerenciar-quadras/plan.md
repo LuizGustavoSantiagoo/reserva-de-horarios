@@ -87,7 +87,7 @@ continua `@Public()`. O `CourtsService` ganha `create(name)` e `rename(id, name)
     `courts.service.ts` e spec, `apps/api/test/courts-admin.e2e-spec.ts`,
     `apps/api/test/swagger.e2e-spec.ts`
 
-- [ ] **Tarefa 4 — Quadras no painel: lista e cadastro**
+- [x] **Tarefa 4 — Quadras no painel: lista e cadastro**
   - Cobre: CA9, CA10
   - Teste primeiro: componente `QuadrasPage`: mostra nome e endereço da arena e as
     quadras por nome com "Ativa"/"Inativa"; carregando; erro de rede ou `500` com

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import type { LocationQuery, LocationQueryRaw } from 'vue-router'
 import CourtPicker from '../components/CourtPicker.vue'
 import DayPicker from '../components/DayPicker.vue'
@@ -225,8 +225,19 @@ onUnmounted(() => {
 <template>
   <div class="mx-auto flex max-w-(--container-6xl) flex-col gap-xl p-lg sm:p-2xl">
     <header class="flex flex-col gap-sm">
-      <p class="text-legenda text-texto-suave uppercase">Reserve seu jogo</p>
-      <h1 class="text-titulo-pagina">Escolha seus horários</h1>
+      <div class="flex items-start justify-between gap-lg">
+        <div class="flex flex-col gap-sm">
+          <p class="text-legenda text-texto-suave uppercase">Reserve seu jogo</p>
+          <h1 class="text-titulo-pagina">Escolha seus horários</h1>
+        </div>
+        <!-- Pedido do usuário (22/11): o dono da arena chega ao painel sem digitar o endereço. -->
+        <RouterLink
+          :to="{ name: 'admin-login' }"
+          class="flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-desabilitado bg-superficie px-lg text-corpo font-semibold text-texto hover:bg-primaria-escura hover:text-superficie focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primaria-escura"
+        >
+          Entrar no painel
+        </RouterLink>
+      </div>
       <p class="text-corpo text-texto-suave">Escolha a quadra e o dia para ver o que está livre.</p>
     </header>
     <p v-if="courts?.length === 0" class="text-legenda text-texto-suave">
